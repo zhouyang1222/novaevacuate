@@ -5,49 +5,74 @@
 # 4. Self fencing by Nova Compute
 
 import datetime
+from openstack_novaclient import NovaClientObj as nova_client
 import commands
-from novaevacuate.novacheck.network.network import get_net_status
-from novaevacuate.novacheck.service.service import get_service_status
+from novaevacuate.novacheck.network.network import get_net_status as network_check
+from novaevacuate.novacheck.service.service import get_service_status as service_check
 from novaevacuate.log import logger
-import novaclient
-from novaclient import client
-from novaevacuate.credentials import get_nova_credentials_v2
 import time
 
-count = 3
-"""def task_period():
-    task_time = {"New_time": None, "Old_time": None}
-    task_ttl = 30
-    start_time = datetime.datetime.now()
-    end_time = datetime.datetime.now()
-    time_result = (end_time - start_time).second
-    if time_result >= 30:
-        task_time["Old_time"] = end_time
-        return True
-    else:
-
-        pass
-
-"""
-
-
-class FenceCheck(object):
-    def __init__(self, node, name):
-        self.node = node
-        self.name = name
+COUNT=3
+class FenceAgent(object):
+    def _check(self,role,node,name):
+        wrong_item = []
+	for i in range(COUNT):
+            time.sleep(60)
+            if role == 'network':
+	        wrong_list = network_check()
+	    elif role == 'service':
+	        wrong_list = service_check()
+	    if wrong_list:
+	        for wrong_element in wrong_list:
+	            if node in wrong_element and name in wrong_element:
+		        continue
+		        #wrong_item.append((node,name))
+		    else:
+		        return False
+	    else:
+	        return False
+	#if wrong_item and (wrong_item[0] == wrong_item[1]):
+	#    return True
+	#else:
+	#    return False
+	return True
+    def _recovery(self,role,node,name):
+        cmd = {'service':'systemctl restart %s' % name,
+	       'network':'ifdown %s && ifup %s' % (name,name)}
+        check_bool = self._check(role,node,name)
+        if check_bool:
+	    (status,info) = commands.getstatusoutput("ssh %s %s" % (node,cmd[role]) )
+	    if status == 0:
+	        logger.error(info)
+	    new_check_bool = self._check(role,node,name)
+        else:
+	    new_check_bool = False
+	return new_check_bool
 
     def network_recovery(self, node, name):
-        while count < 3:
-            time.sleep(10)
-        commands.getoutput("ssh %s ifup %s" % (node, name))
-        network = network_check()
-        if network.status == "ok":
+        check_result = self._recovery('network',node,name)
+	#todo: node_check(node,name)
+        if not check_result:
             logger.info("%s %s recovery Success" % (node, name))
         else:
-            self.instance_evacute(node)
-
+            self.fence(node)
+	    self.instance_evacuate(node)
     def service_recovery(self, node, name):
-        pass
-
-    def instance_evacute(self, node):
-        pass
+        check_result = self._recovery('service',node,name)
+	#todo: service_check(node,name)
+        if not check_result:
+	    logger.info("%s %s recovery Success" % (node,name)
+	else:
+	    #先fence
+	    self.fence(node)
+	    #再迁移
+	    self.instance_evacuate(node)
+    def fence(self,node):
+        nova_client.nova_service_disable(node)        
+    def instance_evacuate(self, node):
+        #先获取异常计算节点的所有云主机的名称
+        instances = nova_client.nova_list(node)
+	#再循环将云主机迁移
+	for instance in instances:
+            nova_client.nova_evacuate(instance)
+FenceCheck = FenceAgent()
