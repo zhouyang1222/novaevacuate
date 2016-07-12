@@ -1,5 +1,9 @@
-from novaevacuate.app import manage
+import sys
+sys.path.append("..")
+from app import manage
 
 def main():
     while True:
         manage.start("nova-evacute")
+
+main()
