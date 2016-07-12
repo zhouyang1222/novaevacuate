@@ -1,7 +1,7 @@
 import commands
 
 #ENV_VAR_FILE = '/root/openrc'
-ENV_VAR_FILE = '/root/keystonerc_admin'
+ENV_VAR_FILE = '/root/openrc'
 
 (s, o) = commands.getstatusoutput('source %s; \
                                  echo OS_AUTH_URL=$OS_AUTH_URL; \

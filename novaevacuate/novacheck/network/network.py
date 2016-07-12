@@ -20,7 +20,8 @@ def server_network_status(network,dict_network,dict_networks):
 #        print member['Status'],member['Name'],member['Addr'],member['Tags']['role']
         if member['Status'] != 1:
 #            print "the node faild"
-            dict_network['name'] = member['Name']
+            name = member['Name'].split('_')
+            dict_network['name'] = name[1]
             dict_network['status'] = u'false'
             dict_network['addr'] = member['Addr']
             dict_network['role'] = member['Tags']['role']

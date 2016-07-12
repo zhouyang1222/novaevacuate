@@ -36,7 +36,12 @@ class NovaClient(object):
 	"""
         nova_compute = self.novaclient.services.list(host = node,binary = binary)
         return nova_compute[0].status,nova_compute[0].state
-
+    def nova_service_disable(self,node,binary="nova-compute"):
+        """disable one nova service of one node you want
+	default:
+	   nova-compute
+	"""
+	return self.novaclient.services.disable(host = node,binary = binary)
 NovaClientObj = NovaClient()
 if __name__ == "__main__":
         print NovaClientObj.nova_list("node-14.eayun.com")

@@ -7,9 +7,9 @@
 import datetime
 from openstack_novaclient import NovaClientObj as nova_client
 import commands
-from novaevacuate.novacheck.network.network import get_net_status as network_check
-from novaevacuate.novacheck.service.service import get_service_status as service_check
-from novaevacuate.log import logger
+from novacheck.network.network import get_net_status as network_check
+from novacheck.service.service import get_service_status as service_check
+from log import logger
 import time
 
 COUNT=3
@@ -61,18 +61,14 @@ class FenceAgent(object):
         check_result = self._recovery('service',node,name)
 	#todo: service_check(node,name)
         if not check_result:
-	    logger.info("%s %s recovery Success" % (node,name)
+	    logger.info("%s %s recovery Success" % (node,name))
 	else:
-	    #先fence
 	    self.fence(node)
-	    #再迁移
 	    self.instance_evacuate(node)
     def fence(self,node):
         nova_client.nova_service_disable(node)        
     def instance_evacuate(self, node):
-        #先获取异常计算节点的所有云主机的名称
         instances = nova_client.nova_list(node)
-	#再循环将云主机迁移
 	for instance in instances:
             nova_client.nova_evacuate(instance)
 FenceCheck = FenceAgent()
