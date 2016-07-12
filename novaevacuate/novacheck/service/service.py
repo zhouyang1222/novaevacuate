@@ -52,22 +52,23 @@ def get_compute():
 class NovaCompute():
     def __init__(self):
         self.compute = get_compute()[1]
-        self.status = self.service_status
 
-    def service_status(self, name):
-        # status is dict example: status = {"node-name":{"node-1":"up"}}
-        novacompute = {"node-name":{}}
+    def service_status(self):
+        # status is list example: [{'status': 'up', 'node-name': 'node1', 'type': 'nova-compute'},
+        # {'status': 'down', 'node-name': 'node-2', 'type': 'nova-compute'}]
+
+        novacompute = []
         for i in self.compute:
             (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep openstack-nova-compute" % (i))
             if s == 0 and o != None:
                 service_status = o
 
             if re.search('runing', service_status) and re.search('active', service_status):
-                novacompute["node-name"][i] = "active"
+                novacompute.append[{"node-name": i,"status": "active", "datatype": "novacompute"}]
             elif re.search('dead', service_status) and re.search('inactive', service_status):
-                novacompute["node-name"][i] = "dead"
+                novacompute.append[{"node-name": i,"status": "dead", "datatype": "novacompute"}]
             elif re.search('faild', service_status):
-                novacompute["node-name"][i] = "faild"
+                novacompute.append[{"node-name": i,"status": "faild", "datatype": "novacompute"}]
 
         return novacompute
 
@@ -96,7 +97,7 @@ class NovaService():
         # self.compute = get_compute()[1]
 
     def service_check(self):
-        novaservice = {"node-name": {}}
+        novaservice = []
         services = self.service_status()[0]
 
         if not services:
@@ -108,22 +109,23 @@ class NovaService():
             while counter < count:
                 service = services[counter]
                 if service.status == "enable" and service.state == "up":
-                    novaservice["node-name"][service.host] = [service.sate]
+                    novaservice.append[{"node-name": service.host,"status": service.state, "datatype": "novaservice"}]
                     # print ("nova compute service on host %s is OK " % (HOST))
                     sys.exit(OK)
                 elif service.status == "disabled":
                     if service.binary == "nova-compute" and service.disabled_reason:
-                        novaservice["node-name"][service.host] = [service.sate]
+                        service.state = "up"
+                        novaservice.append[{"node-name": service.host,"status": service.state, "datatype": "novaservice"}]
                         # print ("nova compute service on host %s is Reserved" %
                         #       (HOST))
                         sys.exit(OK)
 
-                    novaservice["node-name"][service.host] = [service.sate]
+                    novaservice.append[{"node-name": service.host,"status": service.state, "datatype": "novaservice"}]
                     # print ("nova compute service on host %s is Disabled" %
                     #       (HOST))
                     sys.exit(WARNING)
                 elif service.state == "down":
-                    novaservice["node-name"][service.host] = [service.sate]
+                    novaservice.append[{"node-name": service.host,"status": service.state, "datatype": "novaservice"}]
                     # print ("nova compute service on host %s is Down" %
                     #       (HOST))
                     sys.exit(CRITICAL)
@@ -133,11 +135,18 @@ class NovaService():
                     #       (HOST))
                     sys.exit(UNKNOWN)
                 counter+=1
-
+            return novaservice
 
 def get_service_status():
-    pass
+    nova_status = []
+    n_c = NovaCompute.service_status()
+    n_s = NovaService.service_check()
 
+    for i in n_c:
+        nova_status(i)
+
+    for n in n_s:
+        nova_status(n)
 
 
 
