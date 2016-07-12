@@ -143,10 +143,12 @@ def get_service_status():
     n_s = NovaService.service_check()
 
     for i in n_c:
-        nova_status(i)
+        nova_status.append(i)
 
     for n in n_s:
-        nova_status(n)
+        nova_status.append(n)
+
+    return nova_status
 
 
 
