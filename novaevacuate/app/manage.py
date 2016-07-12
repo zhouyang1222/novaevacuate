@@ -1,12 +1,12 @@
 import time
 import sys
-sys.path.append("..")
-from novacheck.network.network import get_net_status as network_check
-from novacheck.network.network import leader
-from novacheck.service.service import get_service_status as service_check
+
+from novaevacuate.novacheck.network.network import get_net_status as network_check
+from novaevacuate.novacheck.network.network import leader
+from novaevacuate.novacheck.service.service import get_service_status as service_check
 #import fence_agent
-import fence_agent
-from log import logger
+from novaevacuate import fence_agent
+from novaevacuate.log import logger
 
 class item:
     def __init__(self):

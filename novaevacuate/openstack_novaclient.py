@@ -9,7 +9,7 @@ class NovaClient(object):
     
     def nova_evacuate(self,instance_id,host=None,on_shared_storage=True,password=None):
         """evacuate an instance
-	"""
+	    """
         return self.novaclient.servers.evacuate(instance_id,host,on_shared_storage,password)
 
     def nova_list(self,node):
@@ -17,32 +17,35 @@ class NovaClient(object):
         return:
 	   all instancs in wrong compute-node
 	"""
-	search_opts = {}
-	search_opts['host'] = node
+        search_opts = {}
+        search_opts['host'] = node
         instance_list = self.novaclient.servers.list(search_opts = search_opts)
-	instances = []
-	if instance_list:
-	    for instance in instance_list:
-	        instances.append(instance.id)
+        instances = []
+        if instance_list:
+            for instance in instance_list:
+                instances.append(instance.id)
         else:
-	    print "%s not found any instances" % node
-	return instances
+            print "%s not found any instances" % node
+        return instances
 
     def nova_service_list(self,node,binary="nova-compute"):
         """list one nova service of one node you want 
         default:
-	   nova-compute
-	return (service status and state)
-	"""
+	    nova-compute
+	    return (service status and state)
+	    """
         nova_compute = self.novaclient.services.list(host = node,binary = binary)
         return nova_compute[0].status,nova_compute[0].state
+
     def nova_service_disable(self,node,binary="nova-compute"):
         """disable one nova service of one node you want
-	default:
-	   nova-compute
-	"""
-	return self.novaclient.services.disable(host = node,binary = binary)
+        default:
+        nova-compute
+	    """
+        return self.novaclient.services.disable(host = node,binary = binary)
+
 NovaClientObj = NovaClient()
+
 if __name__ == "__main__":
         print NovaClientObj.nova_list("node-14.eayun.com")
         print NovaClientObj.nova_service_list("node-14.eayun.com")

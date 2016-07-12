@@ -1,6 +1,5 @@
 import sys
-sys.path.append("..")
-from app import manage
+from novaevacuate.app import manage
 
 def main():
     while True:
