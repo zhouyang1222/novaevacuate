@@ -1,6 +1,7 @@
 from credentials import get_nova_credentials_v2
 from novaclient.client import Client as nova_Client
 import re
+from novaevacuate.log import logger
 
 class NovaClient(object):
     def __init__(self):
@@ -25,7 +26,7 @@ class NovaClient(object):
             for instance in instance_list:
                 instances.append(instance.id)
         else:
-            print "%s not found any instances" % node
+            logger.warn("%s not found any instances" % node)
         return instances
 
     def nova_service_list(self,node,binary="nova-compute"):
@@ -45,7 +46,3 @@ class NovaClient(object):
         return self.novaclient.services.disable(host = node,binary = binary)
 
 NovaClientObj = NovaClient()
-
-if __name__ == "__main__":
-        print NovaClientObj.nova_list("node-14.eayun.com")
-        print NovaClientObj.nova_service_list("node-14.eayun.com")

@@ -18,11 +18,9 @@ def get_compute():
     try:
         services = nova.services.list(binary="nova-compute")
     except novaclient.exceptions.Unauthorized:
-        print("Failed to authenticate to Keystone")
-        sys.exit(-1)
+       logger.warn("Failed to authenticate to Keystone")
     except Exception:
-        print("Failed to query service")
-        sys.exit(-1)
+        logger.warn("Failed to query service")
 
     node_count = len(services)
     counter = 0
@@ -43,22 +41,27 @@ class NovaCompute():
         # status is list example: [{'status': 'up', 'node-name': 'node1', 'type': 'nova-compute'},
         # {'status': 'down', 'node-name': 'node-2', 'type': 'nova-compute'}]
 
+        logger.info("openstack-nova-compute service start check")
         novacompute = []
         for i in self.compute:
             (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep openstack-nova-compute" % (i))
             if s == 0 and o != None:
                 service_status = o
-
-            #if re.search('runing', service_status) and re.search('active', service_status):
-            if 'running' in o and 'active' in o:
-                novacompute.append({"node-name": i,"status": "active", "datatype": "novacompute"})
-            #elif re.search('dead', service_status) and re.search('inactive', service_status):
-            elif 'dead' in o and 'inactive' in o:
-                novacompute.append({"node-name": i,"status": "dead", "datatype": "novacompute"})
-            #elif re.search('faild', service_status):
-            elif 'failed' in o:
-                novacompute.append({"node-name": i,"status": "failed", "datatype": "novacompute"})
-
+                #if re.search('runing', service_status) and re.search('active', service_status):
+                if 'running' in o and 'active' in o:
+                    novacompute.append({"node-name": i,"status": "active", "datatype": "novacompute"})
+                #elif re.search('dead', service_status) and re.search('inactive', service_status):
+                elif 'dead' in o and 'inactive' in o:
+                    novacompute.append({"node-name": i,"status": "dead", "datatype": "novacompute"})
+                #elif re.search('faild', service_status):
+                elif 'failed' in o:
+                    novacompute.append({"node-name": i,"status": "failed", "datatype": "novacompute"})
+            else:
+                novacompute.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
+                logger.warn("%s openstack-nova-compute service unknown" % i)
+            for n in novacompute:
+                status = n["status"]
+            logger.info("openstack-nova-compute in %s is %s" % (i, status) )
         return novacompute
 
 #    def service_active(self, compute):
@@ -86,6 +89,7 @@ class NovaService():
         novaservice = []
         services = get_compute()[0]
 
+        logger.info("nova-compute service check start")
         if not services:
             logger.warn("Service could not be found nova-compute")
         else:
@@ -107,6 +111,10 @@ class NovaService():
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter+=1
+
+                for i in novaservice:
+                    status = i["status"]
+                logger.info("nova-compute service in %s is %s" % (host, status))
             return novaservice
 
 def get_service_status():
