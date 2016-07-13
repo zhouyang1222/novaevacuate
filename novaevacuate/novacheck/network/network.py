@@ -61,7 +61,6 @@ def get_net_status():
     try_connected(mgmt_consul,mgmt_ip)
     try_connected(storage_consul,mgmt_consul)
     server_network_status(mgmt_consul,dict_network,dict_networks)
-    # print "-------------------------------------------"
     server_network_status(storage_consul,dict_network,dict_networks)
     return dict_networks
 
