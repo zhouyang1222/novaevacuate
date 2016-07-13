@@ -21,11 +21,15 @@ class FenceAgent(object):
             if role == 'network':
                 wrong_list = network_check()
             elif role == 'service':
-                wrong_list = service_check()
+                wrong_list = []
+                service_list = service_check()
+                for service in service_list:
+                    if service['status'] == "down":
+                        wrong_list.append(service)   
             if wrong_list:
                 for wrong_element in wrong_list:
-                    if node in wrong_element and name in wrong_element:
-                       continue
+                    if node in str(wrong_element) and name in str(wrong_element):
+                        continue
                     #wrong_item.append((node,name))
                     else:
                         return False
@@ -37,13 +41,16 @@ class FenceAgent(object):
         # return False
         return True
     def _recovery(self,role,node,name):
-        cmd = {'service':'systemctl restart %s' % name,
-			   'network':'ifdown %s && ifup %s' % (name,name)}
+        service_name = "openstack-nova-compute"
+        cmd = {'service':['ssh %s systemctl restart %s' % (node,service_name)],
+               'network':['ssh %s ifdown %s' % (node,name),
+                          'ssh %s ifup %s' % (node,name)]}
         check_bool = self._check(role,node,name)
         if check_bool:
-            (status,info) = commands.getstatusoutput("ssh %s %s" % (node,cmd[role]) )
-        if status == 0:
-            logger.error(info)
+            for cmd_line in cmd[role]:
+                (status,info) = commands.getstatusoutput(cmd_line)
+                if status:
+                    logger.error(info)
             new_check_bool = self._check(role,node,name)
         else:
             new_check_bool = False
@@ -55,15 +62,21 @@ class FenceAgent(object):
         if not check_result:
             logger.info("%s %s recovery Success" % (node, name))
         else:
+            logger.info("start fence")
             self.fence(node)
-        self.instance_evacuate(node)
+            (status,info) = commands.getstatusoutput("ssh %s systemctl stop openstack-nova-compute" % node)
+            logger.info(info)
+            logger.info("start evacuate")
+            self.instance_evacuate(node)
     def service_recovery(self, node, name):
         check_result = self._recovery('service',node,name)
         # todo: service_check(node,name)
         if not check_result:
             logger.info("%s %s recovery Success" % (node,name))
         else:
+            logger.info("start fence")
             self.fence(node)
+            logger.info("start evacuate")
             self.instance_evacuate(node)
     def fence(self,node):
         nova_client.nova_service_disable(node)        

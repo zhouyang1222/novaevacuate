@@ -28,6 +28,7 @@ def manager():
             logger.info("Start check.....")
             net_checks = network_check()
             ser_checks = service_check()
+            print ser_checks
         else:
             time.sleep(10)
             pass
@@ -45,14 +46,14 @@ def manager():
                 
                 logger.error("%s %s status is: %s (%s)" % (network.node, network.name, network.status,network.ip))
                 fence_agent.FenceCheck.network_recovery(network.node, network.name)
-        time.sleep(10)
-"""
+#        time.sleep(10)
+
         for ser_check in ser_checks:
             service = item()
             service.node = ser_check['node-name']
-            service.name = ser_check['']
+            service.name = ser_check['datatype']
             service.status = ser_check['status']
-            if service.status == "ok":
+            if service.status == "active" or service.status == "up":
                 print service.node, service.name, service.status
                 logger.info("%s %s status is: %s" %(service.node, service.name, service.status))
             else:
@@ -60,6 +61,6 @@ def manager():
                 logger.error("%s %s status is: %s" % (service.node, service.name, service.status))
                 fence = fence_agent.FenceCheck.service_recovery(service.node, service.name)
 
-        time.sleep(30)
-"""
+        time.sleep(10)
+
 #manager()
