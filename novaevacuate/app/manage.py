@@ -43,3 +43,4 @@ def manager():
         else:
             logger.error("%s %s status is: %s" % (service.node, service.name, service.status))
             fence = fence_agent.FenceCheck.service_recovery(service.node, service.name)
+

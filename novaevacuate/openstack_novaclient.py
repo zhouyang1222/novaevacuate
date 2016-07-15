@@ -10,14 +10,14 @@ class NovaClient(object):
     
     def nova_evacuate(self,instance_id,host=None,on_shared_storage=True,password=None):
         """evacuate an instance
-	    """
+        """
         return self.novaclient.servers.evacuate(instance_id,host,on_shared_storage,password)
 
     def nova_list(self,node):
         """list all instances of wrong compute-node
         return:
-	   all instancs in wrong compute-node
-	"""
+        all instancs in wrong compute-node
+        """
         search_opts = {}
         search_opts['host'] = node
         instance_list = self.novaclient.servers.list(search_opts = search_opts)
@@ -32,17 +32,43 @@ class NovaClient(object):
     def nova_service_list(self,node,binary="nova-compute"):
         """list one nova service of one node you want 
         default:
-	    nova-compute
-	    return (service status and state)
-	    """
+        nova-compute
+        return (service status and state)
+        """
         nova_compute = self.novaclient.services.list(host = node,binary = binary)
         return nova_compute[0].status,nova_compute[0].state
 
-    def nova_service_disable(self,node,binary="nova-compute"):
+    def nova_service_disable(self, node, binary="nova-compute"):
         """disable one nova service of one node you want
         default:
         nova-compute
-	    """
+        """
         return self.novaclient.services.disable(host = node,binary = binary)
+
+    def nova_service_enable(self, node, binary="nova-compute"):
+        """enable one nova service of one node you want
+        default:
+        nova-compute
+        """
+        return self.novaclient.services.enable(host = node, binary = binary)
+
+    def get_compute(self, binary="nova-compute"):
+        try:
+            services = self.novaclient.services.list(binary=binary)
+        except self.novaclient.exceptions.Unauthorized:
+            logger.warn("Failed to authenticate to Keystone")
+        except Exception:
+            logger.warn("Failed to query service")
+
+        node_count = len(services)
+        counter = 0
+        node_name = []
+
+        while counter < node_count:
+            service = services[counter]
+            node_name.append(service.host)
+            counter+=1
+
+        return services, node_name
 
 NovaClientObj = NovaClient()
