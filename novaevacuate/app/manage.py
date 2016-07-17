@@ -2,6 +2,7 @@ import time
 from novaevacuate.novacheck.network.network import get_net_status as network_check
 from novaevacuate.novacheck.network.network import leader
 from novaevacuate.novacheck.service.service import get_service_status as service_check
+from novaevacuate.novacheck.service.service import recovery
 from novaevacuate import fence_agent
 from novaevacuate.log import logger
 
@@ -21,6 +22,7 @@ def manager():
     else:
         time.sleep(10)
         pass
+
     for net_check in net_checks:
         network = item()
         network.node = net_check['name']
@@ -28,9 +30,11 @@ def manager():
         network.status = net_check['status']
         network.ip = net_check['addr']
         if network.status == "true":
-            logger.info("%s %s status is: %s (%s)" %(network.node, network.name, network.status,network.ip))
+            logger.info("%s %s status is: %s (%s)" %(network.node, network.name,
+                                                     network.status,network.ip))
         else:
-            logger.error("%s %s status is: %s (%s)" % (network.node, network.name, network.status,network.ip))
+            logger.error("%s %s status is: %s (%s)" % (network.node, network.name,
+                                                       network.status,network.ip))
             fence_agent.FenceCheck.network_recovery(network.node, network.name)
 
     for ser_check in ser_checks:
@@ -38,9 +42,11 @@ def manager():
         service.node = ser_check['node-name']
         service.name = ser_check['datatype']
         service.status = ser_check['status']
-        if service.status == "active" or service.status == "up":
-            logger.info("%s %s status is: %s" %(service.node, service.name, service.status))
-        else:
-            logger.error("%s %s status is: %s" % (service.node, service.name, service.status))
-            fence = fence_agent.FenceCheck.service_recovery(service.node, service.name)
+        if service.status == True:
+            logger.info("%s %s status is: %s" %(service.node, service.name,
+                                                service.status))
+        elif service.status == False or service.status == "unknown":
+            logger.error("%s %s status is: %s" % (service.node, service.name,
+                                                  service.status))
+            fence = recovery(service.node, service.name)
 

@@ -1,6 +1,8 @@
 import commands
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
+from novaevacuate.fence_agent import FenceCheck
+from novaevacuate.evacuate_vm_action import EvacuateVmAction
 
 class NovaCompute(object):
     def __init__(self):
@@ -18,18 +20,19 @@ class NovaCompute(object):
                 (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep openstack-nova-compute" % (i))
                 if s == 0 and o != None:
                     if 'running' in o and 'active' in o:
-                        novacompute.append({"node-name": i,"status": "active", "datatype": "novacompute"})
+                        novacompute.append({"node-name": i,"status": True, "datatype": "novacompute"})
                     elif 'dead' in o and 'inactive' in o:
-                        novacompute.append({"node-name": i,"status": "dead", "datatype": "novacompute"})
+                        novacompute.append({"node-name": i,"status": False, "datatype": "novacompute"})
                     elif 'failed' in o:
-                        novacompute.append({"node-name": i,"status": "failed", "datatype": "novacompute"})
+                        novacompute.append({"node-name": i,"status": False, "datatype": "novacompute"})
                 else:
                     novacompute.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
                     error_compute.append(i)
                     logger.warn("%s openstack-nova-compute service unknown" % i)
         return novacompute
 
-    def nova_recovery(self, node):
+    def nova_recovery(self, node, name):
+        FenceCheck.recovery("service", node, name)
         logger.info("openstack-nova-compute service start recovery")
         try:
             commands.getoutput("ssh '%s' systemctl restart openstack-nova-compute")
@@ -57,20 +60,21 @@ class NovaService(object):
                 service = services[counter]
                 host = service.host
                 if service.status == "enabled" and service.state == "up":
-                    novaservice.append({"node-name": host,"status": "up", "datatype": "novaservice"})
+                    novaservice.append({"node-name": host,"status": True, "datatype": "novaservice"})
                 elif service.status == "disabled":
                     if service.binary == "nova-compute" and service.disabled_reason:
-                        novaservice.append({"node-name": host,"status": "up", "datatype": "novaservice"})
+                        novaservice.append({"node-name": host,"status": True, "datatype": "novaservice"})
 
-                    novaservice.append({"node-name": host,"status": "down", "datatype": "novaservice"})
+                    novaservice.append({"node-name": host,"status": False, "datatype": "novaservice"})
                 elif service.state == "down":
-                    novaservice.append({"node-name": host,"status": "down", "datatype": "novaservice"})
+                    novaservice.append({"node-name": host,"status": False, "datatype": "novaservice"})
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
             return novaservice
 
     def service_recovery(self, node, name):
+        FenceCheck.recovery("service", node, name)
         nova_client.nova_service_enable(node)
         logger.info("%s nova-compute service is enabled.")
 
@@ -78,6 +82,10 @@ class NovaService(object):
         nova_client.nova_service_disable(node)
         logger.warn("%s nova-compute service is disabled."
                     "Nova cloud not create instance in %s" % (node, node))
+
+        nova_evacuate = EvacuateVmAction(node)
+        nova_evacuate.run()
+
 
 def get_service_status():
     nova_status = []
@@ -92,3 +100,8 @@ def get_service_status():
 
     return nova_status
 
+def recovery(node, name):
+    if name == "nova-compute":
+        NovaCompute().nova_recovery(node, name)
+    elif name == "nova-service":
+        NovaService().service_recovery(node, name)
