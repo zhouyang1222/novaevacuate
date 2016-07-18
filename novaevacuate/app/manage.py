@@ -6,6 +6,8 @@ from novaevacuate.novacheck.network.network import network_recovery
 from novaevacuate.novacheck.service.service import novaservice_retry
 from novaevacuate.log import logger
 
+ERROR_COMPUTE = []
+
 class item:
     def __init__(self):
         self.node = "null"

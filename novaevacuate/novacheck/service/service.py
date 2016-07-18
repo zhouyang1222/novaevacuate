@@ -3,6 +3,7 @@ import time
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.fence_agent import Fence
+from novaevacuate.app.manage import ERROR_COMPUTE
 
 class NovaService(object):
 
@@ -85,6 +86,9 @@ def novaservice_retry(node, type):
         status = ns.ser_compute()
         for n in status:
             if False in n.values():
+                # add error compute to global list
+                if node not in ERROR_COMPUTE:
+                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)
     elif type == "novacompute":
         for i in range(3):
@@ -96,4 +100,7 @@ def novaservice_retry(node, type):
         status = ns.sys_compute()
         for n in status:
             if False in n.values():
+                # add error compute to global list
+                if node not in ERROR_COMPUTE:
+                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)
