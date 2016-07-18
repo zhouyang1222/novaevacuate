@@ -1,13 +1,14 @@
 import time
 from novaevacuate.novacheck.network.network import get_net_status as network_check
+from novaevacuate.novacheck.service.service import get_service_status as service_check
 from novaevacuate.novacheck.network.network import leader
 from novaevacuate.novacheck.network.network import network_recovery
-from novaevacuate.novacheck.service.service import get_service_status as service_check
-from novaevacuate.novacheck.service.service import recovery
-from novaevacuate import fence_agent
+from novaevacuate.novacheck.service.service import novaservice_retry
 from novaevacuate.log import logger
 
 fenced_nodes = []
+ERROR_COMPUTE = []
+
 class item:
     def __init__(self):
         self.node = "null"
@@ -51,10 +52,10 @@ def manager():
     for ser_check in ser_checks:
         service = item()
         service.node = ser_check['node-name']
-        service.name = ser_check['datatype']
+        service.type = ser_check['datatype']
         service.status = ser_check['status']
         if service.status == True:
-            logger.info("%s %s status is: %s" %(service.node, service.name,
+            logger.info("%s %s status is: %s" %(service.node, service.type,
                                                 service.status))
         elif service.status == False or service.status == "unknown":
             flag = 0
@@ -67,4 +68,7 @@ def manager():
                 logger.error("%s %s status is: %s" % (service.node, service.name,
                                                       service.status))
                 fence = recovery(service.node, service.name)
+            logger.error("%s %s status is: %s" % (service.node, service.type,
+                                                  service.status))
+            novaservice_retry(service.node, service.type)
 

@@ -6,7 +6,6 @@ class EvacuateVmAction():
     def __init__(self, node):
         self._node = node
 
-
     def run(self):
         instances = nova_client.nova_list(self._node)
         try:
