@@ -1,56 +1,44 @@
 import commands
+import time
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
-from novaevacuate.fence_agent import FenceCheck
-from novaevacuate.evacuate_vm_action import EvacuateVmAction
+from novaevacuate.fence_agent import Fence
 
-class NovaCompute(object):
+class NovaService(object):
+
     def __init__(self):
         self.compute = nova_client.get_compute()[1]
+        self.service = nova_client.get_compute()[0]
 
-    def service_status(self):
-        # status is list example: [{'status': 'up', 'node-name': 'node1', 'type': 'nova-compute'},
+    # use systemctl check openstack-nova-compute service message
+    def sys_compute(self):
+        # status is list example: [{'status': 'up', 'node-name': 'node1', 'type':
+        # 'nova-compute'},
         # {'status': 'down', 'node-name': 'node-2', 'type': 'nova-compute'}]
 
         logger.info("openstack-nova-compute service start check")
-        novacompute = []
+        sys_com = []
         for i in self.compute:
-            error_compute = []
-            if i not in error_compute:
-                (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep openstack-nova-compute" % (i))
-                if s == 0 and o != None:
-                    if 'running' in o and 'active' in o:
-                        novacompute.append({"node-name": i,"status": True, "datatype": "novacompute"})
-                    elif 'dead' in o and 'inactive' in o:
-                        novacompute.append({"node-name": i,"status": False, "datatype": "novacompute"})
-                    elif 'failed' in o:
-                        novacompute.append({"node-name": i,"status": False, "datatype": "novacompute"})
-                else:
-                    novacompute.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
-                    error_compute.append(i)
-                    logger.warn("%s openstack-nova-compute service unknown" % i)
-        return novacompute
+            (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep \
+                                                openstack-nova-compute" % (i))
+            if s == 0 and o != None:
+                if 'running' in o and 'active' in o:
+                    sys_com.append({"node-name": i,"status": True, "datatype": "novacompute"})
+                elif 'dead' in o and 'inactive' in o:
+                    sys_com.append({"node-name": i,"status": False, "datatype": "novacompute"})
+                elif 'failed' in o:
+                    sys_com.append({"node-name": i,"status": False, "datatype": "novacompute"})
+            else:
+                sys_com.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
+                logger.warn("%s openstack-nova-compute service unknown" % i)
+        return sys_com
 
-    def nova_recovery(self, node, name):
-        FenceCheck.recovery("service", node, name)
-        logger.info("openstack-nova-compute service start recovery")
-        try:
-            commands.getoutput("ssh '%s' systemctl restart openstack-nova-compute")
-        except Exception as e:
-            logger.error(e)
+    # use novaclient check nova-compute status and state message
+    def ser_compute(self):
+        logger.info("nova-compute status and state start check")
 
-    def nova_stop(self, node):
-        logger.info("openstack-nova-compute service will be stop")
-        try:
-            commands.getoutput("ssh '%s' systemctl stop openstack-nova-compute")
-        except Exception as e:
-            logger.error(e)
-
-class NovaService(object):
-    def service_check(self):
-        novaservice = []
-        services = nova_client.get_compute()[0]
-
+        ser_com = []
+        services = self.service
         if not services:
             logger.warn("Service could not be found nova-compute")
         else:
@@ -60,48 +48,52 @@ class NovaService(object):
                 service = services[counter]
                 host = service.host
                 if service.status == "enabled" and service.state == "up":
-                    novaservice.append({"node-name": host,"status": True, "datatype": "novaservice"})
+                    ser_com.append({"node-name": host,"status": True, "datatype": "novaservice"})
                 elif service.status == "disabled":
                     if service.binary == "nova-compute" and service.disabled_reason:
-                        novaservice.append({"node-name": host,"status": True, "datatype": "novaservice"})
-
-                    novaservice.append({"node-name": host,"status": False, "datatype": "novaservice"})
+                        ser_com.append({"node-name": host,"status": True, "datatype": "novaservice"})
+                    ser_com.append({"node-name": host,"status": False, "datatype": "novaservice"})
                 elif service.state == "down":
-                    novaservice.append({"node-name": host,"status": False, "datatype": "novaservice"})
+                    ser_com.append({"node-name": host,"status": False, "datatype": "novaservice"})
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
-            return novaservice
 
-    def service_recovery(self, node, name):
-        FenceCheck.recovery("service", node, name)
-        nova_client.nova_service_enable(node)
-        logger.info("%s nova-compute service is enabled.")
-
-    def service_fence(self,node):
-        nova_client.nova_service_disable(node)
-        logger.warn("%s nova-compute service is disabled."
-                    "Nova cloud not create instance in %s" % (node, node))
-
-        nova_evacuate = EvacuateVmAction(node)
-        nova_evacuate.run()
-
+            return ser_com
 
 def get_service_status():
     nova_status = []
-    n_c = NovaCompute()
-    n_s = NovaService()
-
-    for i in n_c.service_status():
+    ns = NovaService()
+    for i in ns.sys_compute():
         nova_status.append(i)
 
-    for n in n_s.service_check():
+    for n in ns.ser_compute():
         nova_status.append(n)
 
     return nova_status
 
-def recovery(node, name):
-    if name == "nova-compute":
-        NovaCompute().nova_recovery(node, name)
-    elif name == "nova-service":
-        NovaService().service_recovery(node, name)
+def novaservice_retry(node, type):
+    ns = NovaService()
+    fence = Fence()
+    if type == "novaservice":
+        for i in range(3):
+            logger.warn("%s %s start retry %d check" % (node, type, i))
+            ns.ser_compute()
+            time.sleep(10)
+
+        # get retry check status
+        status = ns.ser_compute()
+        for n in status:
+            if False in n.values():
+                fence.compute_fence(node)
+    elif type == "novacompute":
+        for i in range(3):
+            logger.warn("%s %s start retry %d check" % (node, type, i))
+            ns.sys_compute()
+            time.sleep(10)
+
+        # get retry check status
+        status = ns.sys_compute()
+        for n in status:
+            if False in n.values():
+                fence.compute_fence(node)
