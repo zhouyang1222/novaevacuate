@@ -32,8 +32,6 @@ class NovaService(object):
             else:
                 sys_com.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
                 logger.warn("%s openstack-nova-compute service unknown" % i)
-            for n in sys_com:
-                logger.info("%s openstack-nova-compute status is %s" %(i, n["status"]))
         return sys_com
 
     # use novaclient check nova-compute status and state message
@@ -61,7 +59,6 @@ class NovaService(object):
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
-                logger.info("%s nova service status is %s" %(host, service.status))
             return ser_com
 
 def get_service_status():
@@ -81,22 +78,21 @@ def novaservice_retry(node, type):
     if type == "novaservice":
         for i in range(3):
             logger.warn("%s %s start retry %d check" % (node, type, i))
-            ns.ser_compute()
+            status = ns.ser_compute()
             time.sleep(10)
 
         # get retry check status
-        status = ns.ser_compute()
         for n in status:
             if False in n.values():
                 fence.compute_fence(node)
+
     elif type == "novacompute":
         for i in range(3):
             logger.warn("%s %s start retry %d check" % (node, type, i))
-            ns.sys_compute()
+            status = ns.sys_compute()
             time.sleep(10)
 
         # get retry check status
-        status = ns.sys_compute()
         for n in status:
             if False in n.values():
                 fence.compute_fence(node)
