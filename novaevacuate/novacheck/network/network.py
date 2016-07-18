@@ -8,8 +8,6 @@ from novaevacuate.log import logger
 from novaevacuate.evacuate_vm_action import EvacuateVmAction
 from novaevacuate.fence_agent import service_fence
 
-COUNT = 3
-
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
@@ -17,25 +15,7 @@ def get_ip_address(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
-"""
-def server_network_status(network,dict_network,dict_networks):
-    members = network.agent.members()
-    for member in members:
-        if member['Status'] != 1:
-            name = member['Name'].split('_')
-            dict_network['name'] = name[1]
-            dict_network['status'] = u'false'
-            dict_network['addr'] = member['Addr']
-            dict_network['role'] = member['Tags']['role']
-            mgmt = mgmt_ip.split('.')
-            storage = storage_ip.split('.')
-            ip_addr = member['Addr'].split('.')
-            if mgmt[0]==ip_addr[0] and mgmt[1]==ip_addr[1] and mgmt[2]==ip_addr[2]:
-                dict_network['net_role'] = 'br-mgmt'
-            elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
-                dict_network['net_role'] = u'br-storage'
-            dict_networks.append(dict_network)
-"""
+
 def try_connected(network_consul,network_ip):
     while network_consul:
         try:
@@ -45,11 +25,11 @@ def try_connected(network_consul,network_ip):
             network_consul = consul.Consul(host=network_ip,port=8500)
             pass
 
-def network_confirm(which_node):
+def network_confirm(which_node,net):
     time.sleep(10)
     flag = 0
     while(1):
-        t_members = network.agent.members()
+        t_members = net.agent.members()
         if t_members[which_node]['Status'] != 1:
             if flag == 3:
                 break
@@ -68,16 +48,13 @@ def server_network_status(network,dict_network,dict_networks):
         storage = storage_ip.split('.')
         ip_addr = member['Addr'].split('.')
         if member['Status'] != 1:
-            if network_confirm(flag_mem):
+            if network_confirm(flag_mem,network):
                continue                
             name = member['Name'].split('_')
             dict_network['name'] = name[1]
             dict_network['status'] = u'false'
             dict_network['addr'] = member['Addr']
             dict_network['role'] = member['Tags']['role']
-            #mgmt = mgmt_ip.split('.')
-            #storage = storage_ip.split('.')
-            #ip_addr = member['Addr'].split('.')
             if mgmt[0]==ip_addr[0] and mgmt[1]==ip_addr[1] and mgmt[2]==ip_addr[2]:
                 dict_network['net_role'] = 'br-mgmt'
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
@@ -122,10 +99,7 @@ def network_recovery(node, name):
                     logger.error("%s %s recovery failed."
                                  "Begin execute nova-compute service disable")
                     service_fence(node)
-                    # NS.service_fence(node)
-                    # NC.nova_stop(node)
-                    nova_evacuate = EvacuateVmAction(node)
-                    nova_evacuate.run()
+                    service_evacuate(node)
     else:
         logger.info("send email to ...")
 
