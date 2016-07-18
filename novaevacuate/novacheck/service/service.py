@@ -3,7 +3,7 @@ import time
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.fence_agent import Fence
-from novaevacuate.app.manage import ERROR_COMPUTE
+
 
 class NovaService(object):
 
@@ -32,6 +32,8 @@ class NovaService(object):
             else:
                 sys_com.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
                 logger.warn("%s openstack-nova-compute service unknown" % i)
+            for n in sys_com:
+                logger.info("%s openstack-nova-compute status is %s" %(i, n["status"]))
         return sys_com
 
     # use novaclient check nova-compute status and state message
@@ -59,7 +61,7 @@ class NovaService(object):
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
-
+                logger.info("%s nova service status is %s" %(host, service.status))
             return ser_com
 
 def get_service_status():

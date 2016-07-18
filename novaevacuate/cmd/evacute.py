@@ -1,4 +1,5 @@
 from novaevacuate.app import manage
+import time
 
 def start():
     manage.manager()
@@ -6,5 +7,6 @@ def start():
 while True:
     try:
         start()
+        time.sleep(30)
     except:
         pass

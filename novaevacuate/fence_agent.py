@@ -3,7 +3,7 @@ import time
 import commands
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.evacuate_vm_action import EvacuateVmAction
-from novaevacuate.app.manage import FENCE_NODES
+import novaevacuate.app.manage
 
 class Fence(object):
 
@@ -15,7 +15,7 @@ class Fence(object):
                     "Nova cloud not create instance in %s" % (node, node))
 
         # add Fence node to global FENCE_NODES list
-        FENCE_NODES.append(node)
+        manage.FENCE_NODES.append(node)
 
         time.sleep(60)
         # when execut vm_evacuate , must exec nova service check get nova service

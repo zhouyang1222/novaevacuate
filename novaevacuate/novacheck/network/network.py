@@ -66,7 +66,7 @@ def server_network_status(network,dict_network,dict_networks):
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 net_role = 'br-storage'
             logger.info("%s network %s is up" % (member['Name'],net_role))
-        flag = flag + 1
+        flag_mem = flag_mem + 1
 
 def get_net_status():
     logger.info("start network check")
