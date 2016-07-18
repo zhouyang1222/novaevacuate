@@ -1,6 +1,7 @@
 import time
 from novaevacuate.novacheck.network.network import get_net_status as network_check
 from novaevacuate.novacheck.network.network import leader
+from novaevacuate.novacheck.network.network import network_recovery
 from novaevacuate.novacheck.service.service import get_service_status as service_check
 from novaevacuate.novacheck.service.service import recovery
 from novaevacuate import fence_agent
@@ -35,7 +36,7 @@ def manager():
         else:
             logger.error("%s %s status is: %s (%s)" % (network.node, network.name,
                                                        network.status,network.ip))
-            fence_agent.FenceCheck.network_recovery(network.node, network.name)
+            fence = network_recovery(network.node, network.name)
 
     for ser_check in ser_checks:
         service = item()
