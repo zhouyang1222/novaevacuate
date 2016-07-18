@@ -5,8 +5,8 @@ import fcntl
 import struct
 import time
 from novaevacuate.log import logger
-#from novaevacuate.evacuate_vm_action import EvacuateVmAction
-from novaevacuate.novacheck.service.service import NovaService
+from novaevacuate.evacuate_vm_action import EvacuateVmAction
+from novaevacuate.fence_agent import service_fence
 
 COUNT = 3
 
@@ -17,7 +17,7 @@ def get_ip_address(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
-
+"""
 def server_network_status(network,dict_network,dict_networks):
     members = network.agent.members()
     for member in members:
@@ -35,7 +35,7 @@ def server_network_status(network,dict_network,dict_networks):
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 dict_network['net_role'] = u'br-storage'
             dict_networks.append(dict_network)
-
+"""
 def try_connected(network_consul,network_ip):
     while network_consul:
         try:
@@ -47,7 +47,6 @@ def try_connected(network_consul,network_ip):
 
 def network_confirm(which_node):
     time.sleep(10)
-    t_members = network.agent.members()
     flag = 0
     while(1):
         t_members = network.agent.members()
@@ -108,41 +107,27 @@ def leader():
     else:
         return "false"
 
-
-def recovery(node, name):
-    counter = 1
-    while counter <= COUNT:
-        check_bool = get_net_status()
-        if check_bool:
-            logger.warn("%s %s has wrong,Begin try the  %d check" %
-                            (node, name, counter))
-        else:
-            # new_check_bool = False
-            logger.info("%s %s is auto recovery" % (node, name))
-            break
-        counter += 1
-        time.sleep(10)
-        continue
-    check_bool = get_net_status()
-    if check_bool:
+def network_recovery(node, name):
+    if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
         time.sleep(2)
         commands.getstatusoutput("ssh %s ifup %s" % (node,name))
-
-def network_recovery(node, name):
-    check_result = recovery(node,name)
-    # todo: node_check(node,name)
-    if not check_result:
-        logger.info("%s %s recovery Success" % (node, name))
+        check_networks = get_net_status()
+        # todo: node_check(node,name)
+        if not check_networks:
+            logger.info("%s %s recovery Success" % (node, name))
+        else:
+            for check_net in check_networks:
+                if check_net['name'] == node and check_net['net_role'] == name:
+                    logger.error("%s %s recovery failed."
+                                 "Begin execute nova-compute service disable")
+                    service_fence(node)
+                    # NS.service_fence(node)
+                    # NC.nova_stop(node)
+                    nova_evacuate = EvacuateVmAction(node)
+                    nova_evacuate.run()
     else:
-        logger.error("%s %s recovery failed."
-                     "Begin execute nova-compute service disable")
-        NovaService.service_fence(node)
-#        NS.service_fence(node)
-#        NC.nova_stop(node)
-#        nova_evacuate = EvacuateVmAction(node)
-#        nova_evacuate.run()
-
+        logger.info("send email to ...")
 
 mgmt_ip = get_ip_address('br-mgmt')
 storage_ip = get_ip_address('br-storage')
