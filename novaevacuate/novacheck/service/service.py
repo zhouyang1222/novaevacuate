@@ -86,9 +86,6 @@ def novaservice_retry(node, type):
         status = ns.ser_compute()
         for n in status:
             if False in n.values():
-                # add error compute to global list
-                if node not in ERROR_COMPUTE:
-                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)
     elif type == "novacompute":
         for i in range(3):
@@ -100,7 +97,4 @@ def novaservice_retry(node, type):
         status = ns.sys_compute()
         for n in status:
             if False in n.values():
-                # add error compute to global list
-                if node not in ERROR_COMPUTE:
-                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)

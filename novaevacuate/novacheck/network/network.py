@@ -6,7 +6,7 @@ import struct
 import time
 from novaevacuate.log import logger
 from novaevacuate.evacuate_vm_action import EvacuateVmAction
-from novaevacuate.fence_agent import service_fence
+from novaevacuate.fence_agent import Fence
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -84,7 +84,7 @@ def leader():
     else:
         return "false"
 
-def network_recovery(node, name):
+def network_retry(node, name):
     if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
         time.sleep(2)
@@ -98,8 +98,9 @@ def network_recovery(node, name):
                 if check_net['name'] == node and check_net['net_role'] == name:
                     logger.error("%s %s recovery failed."
                                  "Begin execute nova-compute service disable")
-                    service_fence(node)
-                    service_evacuate(node)
+                    fence = Fence()
+                    fence(node)
+
     else:
         logger.info("send email to ...")
 

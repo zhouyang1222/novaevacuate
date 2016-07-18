@@ -2,12 +2,11 @@ import time
 from novaevacuate.novacheck.network.network import get_net_status as network_check
 from novaevacuate.novacheck.service.service import get_service_status as service_check
 from novaevacuate.novacheck.network.network import leader
-from novaevacuate.novacheck.network.network import network_recovery
+from novaevacuate.novacheck.network.network import network_retry
 from novaevacuate.novacheck.service.service import novaservice_retry
 from novaevacuate.log import logger
 
-fenced_nodes = []
-ERROR_COMPUTE = []
+FENCE_NODES = []
 
 class item:
     def __init__(self):
@@ -23,7 +22,7 @@ def manager():
         net_checks = network_check()
         ser_checks = service_check()
         if not net_checks and not ser_checks:
-            fenced_nodes = []
+            FENCE_NODES = []
     else:
         time.sleep(10)
         pass
@@ -39,7 +38,7 @@ def manager():
                                                      network.status,network.ip))
         else:
             flag = 0
-            for fenced_node in fenced_nodes:
+            for fenced_node in FENCE_NODES:
                 if network.node == fenced_node:
                     logger.info("%s is fenced" %fenced_node)
                     flag = 1
@@ -47,7 +46,7 @@ def manager():
             if flag == 0:
                 logger.error("%s %s status is: %s (%s)" % (network.node, network.name,
                                                            network.status,network.ip))
-                fence = network_recovery(network.node, network.name)
+                network_retry(network.node, network.name)
 
     for ser_check in ser_checks:
         service = item()
@@ -59,7 +58,7 @@ def manager():
                                                 service.status))
         elif service.status == False or service.status == "unknown":
             flag = 0
-            for fenced_node in fenced_nodes:
+            for fenced_node in FENCE_NODES:
                 if network.node == fenced_node:
                     logger.info("%s is fenced" %fenced_node)
                     flag = 1
@@ -67,8 +66,4 @@ def manager():
             if flag == 0:
                 logger.error("%s %s status is: %s" % (service.node, service.name,
                                                       service.status))
-                fence = recovery(service.node, service.name)
-            logger.error("%s %s status is: %s" % (service.node, service.type,
-                                                  service.status))
-            novaservice_retry(service.node, service.type)
-
+                novaservice_retry(service.node, service.type)
