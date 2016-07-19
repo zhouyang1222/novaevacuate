@@ -73,6 +73,7 @@ def leader():
         pass
 
 def network_retry(node, name):
+    role = "network"
     if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
         time.sleep(2)
@@ -88,7 +89,7 @@ def network_retry(node, name):
                     logger.error("%s %s recovery failed."
                                  "Begin execute nova-compute service disable" % (node, name))
                     fence = Fence()
-                    fence.compute_fence(node)
+                    fence.compute_fence(role, node)
     else:
         logger.info("send email to ...")
 

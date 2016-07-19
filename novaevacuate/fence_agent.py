@@ -8,7 +8,7 @@ FENCE_NODES = []
 
 class Fence(object):
 
-    def compute_fence(self, node):
+    def compute_fence(self, role, node):
         nova_client.nova_service_disable(node)
         commands.getoutput("ssh '%s' systemctl stop openstack-nova-compute" % node)
 
@@ -21,10 +21,12 @@ class Fence(object):
         else:
             FENCE_NODES.append(node)
 
-            time.sleep(60)
-            # when execut vm_evacuate , must exec nova service check get nova service
-            # status and state
-            self.vm_evacuate(node)
+            if role == "network":
+                time.sleep(60)
+                # when execut vm_evacuate , must exec nova service check get nova service
+                # status and state
+                logger.warn("%s has error, the instance will evacuate" % node)
+                self.vm_evacuate(node)
 
     def compute_fence_recovery(self, node, name):
         # when the node reboot must enable nova-compute enable

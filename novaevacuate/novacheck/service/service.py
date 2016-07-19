@@ -78,6 +78,8 @@ def get_service_status():
 def novaservice_retry(node, type):
     ns = NovaService()
     fence = Fence()
+    role = "service"
+
     if type == "novaservice":
         for i in range(3):
             logger.warn("%s %s start retry %d check" % (node, type, i))
@@ -87,7 +89,7 @@ def novaservice_retry(node, type):
         # get retry check status
         for n in status:
             if False in n.values():
-                fence.compute_fence(node)
+                fence.compute_fence(role, node)
 
     elif type == "novacompute":
         for i in range(3):
@@ -98,4 +100,4 @@ def novaservice_retry(node, type):
         # get retry check status
         for n in status:
             if False in n.values():
-                fence.compute_fence(node)
+                fence.compute_fence(role, node)
