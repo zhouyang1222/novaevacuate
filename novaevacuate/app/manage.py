@@ -8,6 +8,7 @@ from novaevacuate.log import logger
 from novaevacuate.fence_agent import FENCE_NODES
 
 FENCE_NODE = FENCE_NODES
+NETERR_NODE = []
 
 class item:
     def __init__(self):
@@ -22,29 +23,29 @@ def manager():
         logger.info("Start check.....")
         net_checks = network_check()
         ser_checks = service_check()
-        if not net_checks and not ser_checks:
-            FENCE_NODES = []
     else:
         time.sleep(10)
         pass
 
     for net_check in net_checks:
+        # default network check return error data ,when network check right,the return none
+        # define neterr_node save network check error return data
+
         network = item()
         network.node = net_check['name']
         network.name = net_check['net_role']
         network.status = net_check['status']
         network.ip = net_check['addr']
+        NETERR_NODE.append(network.node)
+
         if network.status == "true":
             logger.info("%s %s status is: %s (%s)" %(network.node, network.name,
                                                      network.status,network.ip))
         else:
-            flag = 0
-            for fenced_node in FENCE_NODE:
-                if network.node == fenced_node:
-                    logger.info("%s is fenced" % fenced_node)
-                    flag = 1
-                    break
-            if flag == 0:
+            if network.node in FENCE_NODE:
+                logger.info("%s has been fence status,do not execute network retry check"
+                            % network.node )
+            else:
                 logger.error("%s %s status is: %s (%s)" % (network.node, network.name,
                                                            network.status,network.ip))
                 network_retry(network.node, network.name)
@@ -54,17 +55,22 @@ def manager():
         service.node = ser_check['node-name']
         service.type = ser_check['datatype']
         service.status = ser_check['status']
+
+        # when compute node recovery, will remove node from FENCE_NODES node name
+        if service.node in FENCE_NODE:
+            if (service.node not in NETERR_NODE) and (service.status == True):
+                FENCE_NODE.remove(service.node)
+
         if service.status == True:
             logger.info("%s %s status is: %s" %(service.node, service.type,
                                                 service.status))
         elif service.status == False or service.status == "unknown":
-            flag = 0
-            for fenced_node in FENCE_NODE:
-                if network.node == fenced_node:
-                    logger.info("%s is fenced" % fenced_node)
-                    flag = 1
-                    break
-            if flag == 0:
-                logger.error("%s %s status is: %s" % (service.node, service.name,
-                                                      service.status))
+            if service.node in FENCE_NODE:
+                logger.info("%s %s status is: %s" %(service.node, service.type,
+                                                    service.status))
+                logger.info("%s has been fence status, do not execute service retry check"
+                            % service.node)
+            else:
+                logger.error("%s %s status is: %s" %
+                             (service.node, service.name, service.status))
                 novaservice_retry(service.node, service.type)

@@ -82,7 +82,7 @@ def novaservice_retry(node, type):
 
     if type == "novaservice":
         for i in range(3):
-            logger.warn("%s %s start retry %d check" % (node, type, i))
+            logger.warn("%s %s start retry %d check" % (node, type, i+1))
             status = ns.ser_compute()
             time.sleep(10)
 
@@ -93,7 +93,7 @@ def novaservice_retry(node, type):
 
     elif type == "novacompute":
         for i in range(3):
-            logger.warn("%s %s start retry %d check" % (node, type, i))
+            logger.warn("%s %s start retry %d check" % (node, type, i+1))
             status = ns.sys_compute()
             time.sleep(10)
 
