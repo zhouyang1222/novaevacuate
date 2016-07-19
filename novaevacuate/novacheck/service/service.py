@@ -3,7 +3,7 @@ import time
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.fence_agent import Fence
-from novaevacuate.app.manage import ERROR_COMPUTE
+
 
 class NovaService(object):
 
@@ -59,7 +59,6 @@ class NovaService(object):
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
-
             return ser_com
 
 def get_service_status():
@@ -79,28 +78,21 @@ def novaservice_retry(node, type):
     if type == "novaservice":
         for i in range(3):
             logger.warn("%s %s start retry %d check" % (node, type, i))
-            ns.ser_compute()
+            status = ns.ser_compute()
             time.sleep(10)
 
         # get retry check status
-        status = ns.ser_compute()
         for n in status:
             if False in n.values():
-                # add error compute to global list
-                if node not in ERROR_COMPUTE:
-                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)
+
     elif type == "novacompute":
         for i in range(3):
             logger.warn("%s %s start retry %d check" % (node, type, i))
-            ns.sys_compute()
+            status = ns.sys_compute()
             time.sleep(10)
 
         # get retry check status
-        status = ns.sys_compute()
         for n in status:
             if False in n.values():
-                # add error compute to global list
-                if node not in ERROR_COMPUTE:
-                    ERROR_COMPUTE.append(node)
                 fence.compute_fence(node)
