@@ -5,7 +5,6 @@ import fcntl
 import struct
 import time
 from novaevacuate.log import logger
-from novaevacuate.evacuate_vm_action import EvacuateVmAction
 from novaevacuate.fence_agent import Fence
 
 def get_ip_address(ifname):
@@ -16,40 +15,28 @@ def get_ip_address(ifname):
         struct.pack('256s', ifname[:15])
     )[20:24])
 
-def try_connected(network_consul,network_ip):
-    while network_consul:
-        try:
-            network_consul.agent.self()
-            break
-        except Exception:
-            network_consul = consul.Consul(host=network_ip,port=8500)
-            pass
-
 def network_confirm(which_node,net):
     time.sleep(10)
     flag = 0
-    while(1):
+    while flag < 3:
         t_members = net.agent.members()
-        if t_members[which_node]['Status'] != 1:
-            if flag == 3:
-                break
-            else:
+        for t_member in t_members:
+            if t_member['Name'] == which_node and t_member['Status'] != 1:
                 time.sleep(10)
-        else:
-            return True
+            elif t_member['Name'] == which_node and t_member['Status'] == 1:
+                return True
         flag = flag + 1
     return False
 
 def server_network_status(network,dict_network,dict_networks):
     members = network.agent.members()
-    flag_mem = 0
     for member in members:
         mgmt = mgmt_ip.split('.')
         storage = storage_ip.split('.')
         ip_addr = member['Addr'].split('.')
         if member['Status'] != 1:
-            if network_confirm(flag_mem,network):
-               continue                
+            if network_confirm(member['Name'],network):
+                continue                
             name = member['Name'].split('_')
             dict_network['name'] = name[1]
             dict_network['status'] = u'false'
@@ -59,6 +46,7 @@ def server_network_status(network,dict_network,dict_networks):
                 dict_network['net_role'] = 'br-mgmt'
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 dict_network['net_role'] = u'br-storage'
+                print dict_network
             dict_networks.append(dict_network)
         elif member['Tags']['role'] == 'node':
             if mgmt[0]==ip_addr[0] and mgmt[1]==ip_addr[1] and mgmt[2]==ip_addr[2]:
@@ -66,29 +54,30 @@ def server_network_status(network,dict_network,dict_networks):
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 net_role = 'br-storage'
             logger.info("%s network %s is up" % (member['Name'],net_role))
-        flag_mem = flag_mem + 1
 
 def get_net_status():
     logger.info("start network check")
     dict_network = {'name': 'null', 'status': 'true', 'addr': 'null', 'role': 'null', 'net_role': 'null'}
     dict_networks = []
-    try_connected(mgmt_consul,mgmt_ip)
-    try_connected(storage_consul,mgmt_consul)
     server_network_status(mgmt_consul,dict_network,dict_networks)
     server_network_status(storage_consul,dict_network,dict_networks)
     return dict_networks
 
 def leader():
-    if storage_consul.status.leader() == (get_ip_address('br-storage') + ":8300"):
-        return "true"
-    else:
-        return "false"
+    try:
+        if storage_consul.status.leader() == (get_ip_address('br-storage') + ":8300"):
+            return "true"
+        else:
+            return "false"
+    except Exception:
+        pass
 
 def network_retry(node, name):
     if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
         time.sleep(2)
         commands.getstatusoutput("ssh %s ifup %s" % (node,name))
+        logger.info("ssh %s ifup %s" % (node,name))
         check_networks = get_net_status()
         # todo: node_check(node,name)
         if not check_networks:
@@ -97,10 +86,9 @@ def network_retry(node, name):
             for check_net in check_networks:
                 if check_net['name'] == node and check_net['net_role'] == name:
                     logger.error("%s %s recovery failed."
-                                 "Begin execute nova-compute service disable")
+                                 "Begin execute nova-compute service disable" % (node, name))
                     fence = Fence()
-                    fence(node)
-
+                    fence.compute_fence(node)
     else:
         logger.info("send email to ...")
 
