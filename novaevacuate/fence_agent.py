@@ -6,6 +6,7 @@ from novaevacuate.evacuate_vm_action import EvacuateVmAction
 
 FENCE_NODES = []
 
+
 class Fence(object):
 
     def compute_fence(self, role, node):
@@ -22,11 +23,24 @@ class Fence(object):
             FENCE_NODES.append(node)
 
             if role == "network":
-                time.sleep(60)
-                # when execut vm_evacuate , must exec nova service check get nova service
-                # status and state
-                logger.warn("%s has error, the instance will evacuate" % node)
-                self.vm_evacuate(node)
+                flag = 0
+                while True:
+                    service_status = nova_client.service_status()
+                    time.sleep(10)
+                    if service_status:
+                        for i in service_status:
+                            if node == i["node-name"]:
+                                if i["status"] == "disabled" and i["state"] == "down":
+                                    # when execut vm_evacuate , must exec nova service
+                                    # check get nova service
+                                    # status and state
+                                    logger.warn("%s has error, the instance will evacuate" % node)
+                                    self.vm_evacuate(node)
+                                    flag = 1
+                    if flag == 0:
+                        continue
+                    else:
+                        break
 
     def compute_fence_recovery(self, node, name):
         # when the node reboot must enable nova-compute enable

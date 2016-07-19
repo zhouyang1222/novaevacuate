@@ -20,7 +20,7 @@ class item:
 
 def manager():
     if leader() == "true":
-        logger.info("Start check.....")
+        logger.info("Openstack nova evacuate start check")
         net_checks = network_check()
         ser_checks = service_check()
     else:

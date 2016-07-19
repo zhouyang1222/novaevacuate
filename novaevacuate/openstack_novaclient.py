@@ -71,4 +71,17 @@ class NovaClient(object):
 
         return services, node_name
 
+    def service_status(self):
+        services = self.get_compute()[0]
+        count = len(services)
+        counter = 0
+        ser_status = []
+
+        while counter < count:
+            service = services[counter]
+            ser_status.append({"node-name":service.host, "status": service.status,
+                               "state":service.state})
+            counter += 1
+        return ser_status
+
 NovaClientObj = NovaClient()
