@@ -1,9 +1,10 @@
-from novaevacuate.log import logger
 import time
 import commands
+from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.evacuate_vm_action import EvacuateVmAction
-import novaevacuate.app.manage
+
+FENCE_NODES = []
 
 class Fence(object):
 
@@ -15,12 +16,15 @@ class Fence(object):
                     "Nova cloud not create instance in %s" % (node, node))
 
         # add Fence node to global FENCE_NODES list
-        manage.FENCE_NODES.append(node)
+        if node in FENCE_NODES:
+            logger.info("%s has been fence status" % node)
+        else:
+            FENCE_NODES.append(node)
 
-        time.sleep(60)
-        # when execut vm_evacuate , must exec nova service check get nova service
-        # status and state
-        self.vm_evacuate(node)
+            time.sleep(60)
+            # when execut vm_evacuate , must exec nova service check get nova service
+            # status and state
+            self.vm_evacuate(node)
 
     def compute_fence_recovery(self, node, name):
         # when the node reboot must enable nova-compute enable

@@ -3,7 +3,9 @@ import time
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.fence_agent import Fence
+from novaevacuate.fence_agent import FENCE_NODES
 
+FENCE_NODE = FENCE_NODES
 
 class NovaService(object):
 
@@ -25,6 +27,7 @@ class NovaService(object):
             if s == 0 and o != None:
                 if 'running' in o and 'active' in o:
                     sys_com.append({"node-name": i,"status": True, "datatype": "novacompute"})
+
                 elif 'dead' in o and 'inactive' in o:
                     sys_com.append({"node-name": i,"status": False, "datatype": "novacompute"})
                 elif 'failed' in o:

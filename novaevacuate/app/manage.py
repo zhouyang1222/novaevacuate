@@ -5,8 +5,9 @@ from novaevacuate.novacheck.network.network import leader
 from novaevacuate.novacheck.network.network import network_retry
 from novaevacuate.novacheck.service.service import novaservice_retry
 from novaevacuate.log import logger
+from novaevacuate.fence_agent import FENCE_NODES
 
-FENCE_NODES = []
+FENCE_NODE = FENCE_NODES
 
 class item:
     def __init__(self):
@@ -38,9 +39,9 @@ def manager():
                                                      network.status,network.ip))
         else:
             flag = 0
-            for fenced_node in FENCE_NODES:
+            for fenced_node in FENCE_NODE:
                 if network.node == fenced_node:
-                    logger.info("%s is fenced" %fenced_node)
+                    logger.info("%s is fenced" % fenced_node)
                     flag = 1
                     break
             if flag == 0:
@@ -58,9 +59,9 @@ def manager():
                                                 service.status))
         elif service.status == False or service.status == "unknown":
             flag = 0
-            for fenced_node in FENCE_NODES:
+            for fenced_node in FENCE_NODE:
                 if network.node == fenced_node:
-                    logger.info("%s is fenced" %fenced_node)
+                    logger.info("%s is fenced" % fenced_node)
                     flag = 1
                     break
             if flag == 0:
