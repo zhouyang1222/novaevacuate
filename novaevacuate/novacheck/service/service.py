@@ -13,13 +13,13 @@ class NovaService(object):
         self.compute = nova_client.get_compute()[1]
         self.service = nova_client.get_compute()[0]
 
-    # use systemctl check openstack-nova-compute service message
     def sys_compute(self):
-        # status is list example: [{'status': 'up', 'node-name': 'node1', 'type':
-        # 'nova-compute'},
-        # {'status': 'down', 'node-name': 'node-2', 'type': 'nova-compute'}]
+        """use systemctl check openstack-nova-compute service message
 
+        return: sys_com data format list
+        """
         logger.info("openstack-nova-compute service start check")
+
         sys_com = []
         for i in self.compute:
             (s, o) = commands.getstatusoutput("ssh '%s' systemctl -a|grep \
@@ -35,10 +35,15 @@ class NovaService(object):
             else:
                 sys_com.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
                 logger.warn("%s openstack-nova-compute service unknown" % i)
+
         return sys_com
 
-    # use novaclient check nova-compute status and state message
     def ser_compute(self):
+        """use novaclient check nova-compute status and state message
+
+        novaclient get state all ways  time delay
+        :return: ser_com data format list
+        """
         logger.info("nova-compute status and state start check")
 
         ser_com = []
@@ -62,9 +67,17 @@ class NovaService(object):
                 else:
                     logger.error("nova compute on host %s is in an unknown State" % (service.host))
                 counter += 1
+
             return ser_com
 
 def get_service_status():
+    """ When manage get nova service check data ,will be return nova_status data
+
+    :return: nova_status is a list data
+    :Example: nova_status = [{"node-name":"node-1", "status":True, "datatype":"novaservice"},
+                            {"node-name":"node-2", "status":False, "datatype":"novacompute"}]
+    """
+
     nova_status = []
     ns = NovaService()
     for i in ns.sys_compute():
@@ -76,6 +89,12 @@ def get_service_status():
     return nova_status
 
 def novaservice_retry(node, type):
+    """If first check false, the check will retry three
+
+    :param node:
+    :param type:
+    :return:
+    """
     ns = NovaService()
     fence = Fence()
     role = "service"
