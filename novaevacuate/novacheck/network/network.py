@@ -17,8 +17,11 @@ class Network(object):
         self.dict_networks = []
         self.netmask = 24
     
-    # get local ip addr
     def get_ip_address(self,ifname):
+        """ 
+        get local ip addr
+        """
+
         s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         return socket.inet_ntoa(fcntl.ioctl(
                 s.fileno(),
@@ -56,8 +59,12 @@ class Network(object):
             ip_bin = ip_bin + ip_num
         return ip_bin
 
-    # Traversal all networks , when someone error , assignment to dict and append to list
     def server_network_status(self,network):
+        """
+        Traversal all networks , when someone error , 
+        assignment to dict and append to list
+        """
+
         dict_network = {}
         dict_network['status'] = 'true'
         members = network.agent.members()
@@ -87,8 +94,11 @@ class Network(object):
                     net_role = 'br-storage'
                 logger.info("%s network %s is up" % (member['Name'],net_role))
 
-# try to restore the network ,if no carried out fence
 def network_retry(node, name):
+    """
+    try to restore the network ,if no carried out fence
+    """
+
     role = "network"
     if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
@@ -116,6 +126,7 @@ def get_net_status():
     """
     :return: list of error network
     """
+
     network_obj = Network()
     logger.info("start network check")
     network_obj.server_network_status(network_obj.mgmt_consul)
@@ -124,6 +135,10 @@ def get_net_status():
 
 # return current  leader
 def leader():
+    """
+    return current  leader
+    """
+
     network_obj = Network()
     storage_consul = network_obj.storage_consul
     try:

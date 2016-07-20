@@ -25,7 +25,7 @@ def manager():
     else:
         time.sleep(10)
         pass
-
+    # get network  error list
     NETERR_NODE = []
     for net_check in net_checks:
         # default network check return error data ,when network check right,
