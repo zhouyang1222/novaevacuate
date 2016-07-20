@@ -1,3 +1,8 @@
+"""
+Nova service check record all data
+If nova service check get service false, the nova service will be execute nova
+service-disable node, but do not execute evacuate.
+"""
 import commands
 import time
 from novaevacuate.log import logger
@@ -26,14 +31,13 @@ class NovaService(object):
                                                 openstack-nova-compute" % (i))
             if s == 0 and o != None:
                 if 'running' in o and 'active' in o:
-                    sys_com.append({"node-name": i,"status": True, "datatype": "novacompute"})
-
+                    sys_com.append({"node": i,"status": "up", "type": "novacompute"})
                 elif 'dead' in o and 'inactive' in o:
-                    sys_com.append({"node-name": i,"status": False, "datatype": "novacompute"})
+                    sys_com.append({"node": i,"status": "down", "type": "novacompute"})
                 elif 'failed' in o:
-                    sys_com.append({"node-name": i,"status": False, "datatype": "novacompute"})
+                    sys_com.append({"node": i,"status": "down", "type": "novacompute"})
             else:
-                sys_com.append({"node-name": i,"status": "unknown", "datatype": "novacompute"})
+                sys_com.append({"node": i,"status": "unknown", "type": "novacompute"})
                 logger.warn("%s openstack-nova-compute service unknown" % i)
 
         return sys_com
@@ -57,15 +61,16 @@ class NovaService(object):
                 service = services[counter]
                 host = service.host
                 if service.status == "enabled" and service.state == "up":
-                    ser_com.append({"node-name": host,"status": True, "datatype": "novaservice"})
+                    ser_com.append({"node": host,"status": "up", "type": "novaservice"})
                 elif service.status == "disabled":
                     if service.binary == "nova-compute" and service.disabled_reason:
-                        ser_com.append({"node-name": host,"status": True, "datatype": "novaservice"})
-                    ser_com.append({"node-name": host,"status": False, "datatype": "novaservice"})
+                        ser_com.append({"node": host,"status": "up", "type": "novaservice"})
+                    ser_com.append({"node": host,"status": "down", "type": "novaservice"})
                 elif service.state == "down":
-                    ser_com.append({"node-name": host,"status": False, "datatype": "novaservice"})
+                    ser_com.append({"node": host,"status": "down", "type": "novaservice"})
                 else:
-                    logger.error("nova compute on host %s is in an unknown State" % (service.host))
+                    logger.error("nova compute on host %s is in an unknown State"
+                                 % (service.host))
                 counter += 1
 
             return ser_com
@@ -74,8 +79,8 @@ def get_service_status():
     """ When manage get nova service check data ,will be return nova_status data
 
     :return: nova_status is a list data
-    :Example: nova_status = [{"node-name":"node-1", "status":True, "datatype":"novaservice"},
-                            {"node-name":"node-2", "status":False, "datatype":"novacompute"}]
+    :Example: nova_status = [{"node":"node-1", "status":"up", "type":"novaservice"},
+                            {"node":"node-2", "status":"down", "type":"novacompute"}]
     """
 
     nova_status = []
@@ -89,11 +94,8 @@ def get_service_status():
     return nova_status
 
 def novaservice_retry(node, type):
-    """If first check false, the check will retry three
+    """If first check false, the check will retry three times
 
-    :param node:
-    :param type:
-    :return:
     """
     ns = NovaService()
     fence = Fence()
@@ -105,9 +107,10 @@ def novaservice_retry(node, type):
             status = ns.ser_compute()
             time.sleep(10)
 
-        # get retry check status
         for n in status:
-            if False in n.values():
+            # Execute three times after,get status data, the data only the
+            # third data.
+            if "down" in n.values():
                 fence.compute_fence(role, node)
 
     elif type == "novacompute":
@@ -116,7 +119,6 @@ def novaservice_retry(node, type):
             status = ns.sys_compute()
             time.sleep(10)
 
-        # get retry check status
         for n in status:
-            if False in n.values():
+            if "down" in n.values():
                 fence.compute_fence(role, node)

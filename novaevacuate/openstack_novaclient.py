@@ -79,7 +79,7 @@ class NovaClient(object):
 
         while counter < count:
             service = services[counter]
-            ser_status.append({"node-name":service.host, "status": service.status,
+            ser_status.append({"node":service.host, "status": service.status,
                                "state":service.state})
             counter += 1
         return ser_status

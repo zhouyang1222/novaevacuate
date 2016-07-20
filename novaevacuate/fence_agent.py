@@ -29,12 +29,13 @@ class Fence(object):
                     time.sleep(10)
                     if service_status:
                         for i in service_status:
-                            if node == i["node-name"]:
+                            if node == i["node"]:
                                 if i["status"] == "disabled" and i["state"] == "down":
                                     # when execut vm_evacuate , must exec nova service
                                     # check get nova service
                                     # status and state
-                                    logger.warn("%s has error, the instance will evacuate" % node)
+                                    logger.warn("%s has error, the instance will "
+                                                "evacuate" % node)
                                     self.vm_evacuate(node)
                                     flag = 1
                     if flag == 0:
