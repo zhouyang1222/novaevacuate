@@ -7,7 +7,6 @@ from novaevacuate.send_email import Email
 
 FENCE_NODES = []
 
-
 class Fence(object):
 
     def compute_fence(self, role, node):
@@ -60,6 +59,9 @@ class Fence(object):
         logger.info("%s nova-compute service is enabled.")
 
     def vm_evacuate(self, node):
+        """When execute fence after, the error node will be evacuate
+
+        """
         nova_evacuate = EvacuateVmAction(node)
         nova_evacuate.run()
 
