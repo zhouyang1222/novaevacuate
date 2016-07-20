@@ -8,7 +8,6 @@ from novaevacuate.log import logger
 from novaevacuate.fence_agent import FENCE_NODES
 
 FENCE_NODE = FENCE_NODES
-NETERR_NODE = []
 
 class item:
     def __init__(self):
@@ -27,6 +26,7 @@ def manager():
         time.sleep(10)
         pass
 
+    NETERR_NODE = []
     for net_check in net_checks:
         # default network check return error data ,when network check right,the return none
         # define neterr_node save network check error return data

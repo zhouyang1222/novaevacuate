@@ -3,6 +3,7 @@ import commands
 from novaevacuate.log import logger
 from novaevacuate.openstack_novaclient import NovaClientObj as nova_client
 from novaevacuate.evacuate_vm_action import EvacuateVmAction
+from novaevacuate.send_email import Email
 
 FENCE_NODES = []
 
@@ -36,11 +37,21 @@ class Fence(object):
                                     # status and state
                                     logger.warn("%s has error, the instance will evacuate" % node)
                                     self.vm_evacuate(node)
+                                    message = "%s service %s had been error " % (node, role)
+                                    email = Email()
+                                    email.send_email(message)
+                                    logger.info("send email with %s had been evacuated" % node)
                                     flag = 1
                     if flag == 0:
                         continue
                     else:
                         break
+            else:
+                message = "%s service %s had been error " % (node, role)
+                email = Email()
+                email.send_email(message)
+                logger.info("send email with %s service %s had been error" % (node, role))
+    
 
     def compute_fence_recovery(self, node, name):
         # when the node reboot must enable nova-compute enable

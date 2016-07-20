@@ -18,5 +18,5 @@ class Email(object):
             s.login(self._user, self._pwd)
             s.sendmail(self._user, self._to, msg.as_string())
             s.close()
-        except Exception
+        except Exception:
             logger.error("send email error!!")

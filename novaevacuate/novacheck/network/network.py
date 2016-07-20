@@ -15,7 +15,7 @@ class Network(object):
         self.mgmt_consul = consul.Consul(host=self.mgmt_ip,port=8500)
         self.storage_consul = consul.Consul(host=self.storage_ip,port=8500)
         self.dict_networks = []
-        self.netmask = 22
+        self.netmask = 24
     
     # get local ip addr
     def get_ip_address(self,ifname):
@@ -47,7 +47,12 @@ class Network(object):
         ip_nums = ip.split('.')
         ip_bin = ''
         for n in ip_nums:
-            ip_bin += str(bin(int(n)))
+            ip_num = str(bin(int(n)))[2:]
+            length = len(ip_num)
+            while length < 8:
+                ip_num = '0'+ip_num
+                length = len(ip_num)
+            ip_bin = ip_bin + ip_num
         return ip_bin
 
     # Traversal all networks , when someone error , assignment to dict and append to list
