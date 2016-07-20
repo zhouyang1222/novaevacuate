@@ -6,6 +6,7 @@ import struct
 import time
 from novaevacuate.log import logger
 from novaevacuate.fence_agent import Fence
+from novaevacuate.send_email import Email
 
 class Network(object):
     def __init__(self):
@@ -26,7 +27,7 @@ class Network(object):
     
     """
     retry three times to confirm the network, 
-    if confirm the network had died ，return true ,else return false
+    if confirm the network had died ,return true ,else return false
     """
     def network_confirm(self,which_node,net):
         time.sleep(10)
@@ -92,9 +93,12 @@ def network_retry(node, name):
                     fence = Fence()
                     fence.compute_fence(role, node)
     else:
+        message = "%s network %s had been error " % (node, name)
+        email = Email()
+        email.send_email(message)
         logger.info("send email to ...")
 
-# transfer this function ，return  list of error network
+# transfer this function ,return  list of error network
 def get_net_status():
     network_obj = Network()
     logger.info("start network check")

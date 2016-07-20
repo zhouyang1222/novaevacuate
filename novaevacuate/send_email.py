@@ -1,5 +1,6 @@
 import smtplib
 from email.mime.text import MIMEText
+from novaevacuate.log import logger
 
 class Email(object):
     def __init__(self):
@@ -12,7 +13,10 @@ class Email(object):
         msg["Subject"] = "mail from: eayunstack"
         msg["From"]    = self._user
         msg["To"]      = self._to
-        s = smtplib.SMTP("smtp.exmail.qq.com", timeout=30)
-        s.login(self._user, self._pwd)
-        s.sendmail(self._user, self._to, msg.as_string())
-        s.close()
+        try:
+            s = smtplib.SMTP("smtp.exmail.qq.com", timeout=30)
+            s.login(self._user, self._pwd)
+            s.sendmail(self._user, self._to, msg.as_string())
+            s.close()
+        except Exception
+            logger.error("send email error!!")
