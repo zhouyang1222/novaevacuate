@@ -25,11 +25,13 @@ class Network(object):
                 struct.pack('256s',ifname[:15])
                 )[20:24])
     
-    """
-    retry three times to confirm the network, 
-    if confirm the network had died ，return true ,else return false
-    """
+
     def network_confirm(self,which_node,net):
+        """
+        retry three times to confirm the network,
+        if confirm the network had died return true ,else return false
+        """
+
         time.sleep(10)
         flag = 0
         while flag < 3:
@@ -102,8 +104,10 @@ def network_retry(node, name):
     else:
         logger.info("send email to ...")
 
-# transfer this function ，return  list of error network
 def get_net_status():
+    """
+    :return: list of error network
+    """
     network_obj = Network()
     logger.info("start network check")
     network_obj.server_network_status(network_obj.mgmt_consul)
