@@ -7,6 +7,7 @@ import time
 from novaevacuate.log import logger
 from novaevacuate.fence_agent import Fence
 
+# get local ip addr
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
@@ -15,6 +16,10 @@ def get_ip_address(ifname):
         struct.pack('256s', ifname[:15])
     )[20:24])
 
+"""
+ retry three times to confirm the network, 
+ if confirm the network had died ，return true ,else return false
+"""
 def network_confirm(which_node,net):
     time.sleep(10)
     flag = 0
@@ -28,6 +33,7 @@ def network_confirm(which_node,net):
         flag = flag + 1
     return False
 
+# Traversal all networks , when someone error , assignment to dict and append to list
 def server_network_status(network,dict_network,dict_networks):
     members = network.agent.members()
     for member in members:
@@ -35,6 +41,7 @@ def server_network_status(network,dict_network,dict_networks):
         storage = storage_ip.split('.')
         ip_addr = member['Addr'].split('.')
         if member['Status'] != 1:
+            # when searched one network error , sleep awhile ,if it can restore auto 
             if network_confirm(member['Name'],network):
                 continue                
             name = member['Name'].split('_')
@@ -46,7 +53,7 @@ def server_network_status(network,dict_network,dict_networks):
                 dict_network['net_role'] = 'br-mgmt'
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 dict_network['net_role'] = u'br-storage'
-                print dict_network
+            # append the dict of error-network   
             dict_networks.append(dict_network)
         elif member['Tags']['role'] == 'node':
             if mgmt[0]==ip_addr[0] and mgmt[1]==ip_addr[1] and mgmt[2]==ip_addr[2]:
@@ -54,7 +61,7 @@ def server_network_status(network,dict_network,dict_networks):
             elif storage[0]==ip_addr[0] and storage[1]==ip_addr[1] and storage[2]==ip_addr[2]:
                 net_role = 'br-storage'
             logger.info("%s network %s is up" % (member['Name'],net_role))
-
+# transfer this function ，return  list of error network
 def get_net_status():
     logger.info("start network check")
     dict_network = {'name': 'null', 'status': 'true', 'addr': 'null', 'role': 'null', 'net_role': 'null'}
@@ -62,7 +69,7 @@ def get_net_status():
     server_network_status(mgmt_consul,dict_network,dict_networks)
     server_network_status(storage_consul,dict_network,dict_networks)
     return dict_networks
-
+# return current  leader
 def leader():
     try:
         if storage_consul.status.leader() == (get_ip_address('br-storage') + ":8300"):
@@ -71,7 +78,7 @@ def leader():
             return "false"
     except Exception:
         pass
-
+# try to restore the network ,if no carried out fence
 def network_retry(node, name):
     role = "network"
     if name == 'br-storage':
@@ -92,7 +99,7 @@ def network_retry(node, name):
                     fence.compute_fence(role, node)
     else:
         logger.info("send email to ...")
-
+# init data
 mgmt_ip = get_ip_address('br-mgmt')
 storage_ip = get_ip_address('br-storage')
 mgmt_consul = consul.Consul(host=mgmt_ip,port=8500)
