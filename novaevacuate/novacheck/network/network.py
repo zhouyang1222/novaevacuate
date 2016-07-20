@@ -112,8 +112,10 @@ def get_net_status():
 
 # return current  leader
 def leader():
+    network_obj = Network()
+    storage_consul = network_obj.storage_consul
     try:
-        if storage_consul.status.leader() == (get_ip_address('br-storage') + ":8300"):
+        if storage_consul.status.leader() == (network_obj.storage_ip + ":8300"):
             return "true"
         else:
             return "false"
