@@ -6,6 +6,7 @@ import struct
 import time
 from novaevacuate.log import logger
 from novaevacuate.fence_agent import Fence
+from novaevacuate.send_email import Email
 
 class Network(object):
     def __init__(self):
@@ -14,10 +15,13 @@ class Network(object):
         self.mgmt_consul = consul.Consul(host=self.mgmt_ip,port=8500)
         self.storage_consul = consul.Consul(host=self.storage_ip,port=8500)
         self.dict_networks = []
-        self.netmask = 22
+        self.netmask = 24
     
-    # get local ip addr
     def get_ip_address(self,ifname):
+        """ 
+        get local ip addr
+        """
+
         s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         return socket.inet_ntoa(fcntl.ioctl(
                 s.fileno(),
@@ -25,7 +29,6 @@ class Network(object):
                 struct.pack('256s',ifname[:15])
                 )[20:24])
     
-
     def network_confirm(self,which_node,net):
         """
         retry three times to confirm the network,
@@ -48,11 +51,20 @@ class Network(object):
         ip_nums = ip.split('.')
         ip_bin = ''
         for n in ip_nums:
-            ip_bin += str(bin(int(n)))
+            ip_num = str(bin(int(n)))[2:]
+            length = len(ip_num)
+            while length < 8:
+                ip_num = '0'+ip_num
+                length = len(ip_num)
+            ip_bin = ip_bin + ip_num
         return ip_bin
 
-    # Traversal all networks , when someone error , assignment to dict and append to list
     def server_network_status(self,network):
+        """
+        Traversal all networks , when someone error , 
+        assignment to dict and append to list
+        """
+
         dict_network = {}
         dict_network['status'] = 'true'
         members = network.agent.members()
@@ -82,8 +94,11 @@ class Network(object):
                     net_role = 'br-storage'
                 logger.info("%s network %s is up" % (member['Name'],net_role))
 
-# try to restore the network ,if no carried out fence
 def network_retry(node, name):
+    """
+    try to restore the network ,if no carried out fence
+    """
+
     role = "network"
     if name == 'br-storage':
         commands.getstatusoutput("ssh %s ifdown %s" % (node,name))
@@ -102,12 +117,16 @@ def network_retry(node, name):
                     fence = Fence()
                     fence.compute_fence(role, node)
     else:
+        message = "%s network %s had been error " % (node, name)
+        email = Email()
+        email.send_email(message)
         logger.info("send email to ...")
 
 def get_net_status():
     """
     :return: list of error network
     """
+
     network_obj = Network()
     logger.info("start network check")
     network_obj.server_network_status(network_obj.mgmt_consul)
@@ -116,6 +135,10 @@ def get_net_status():
 
 # return current  leader
 def leader():
+    """
+    return current  leader
+    """
+
     network_obj = Network()
     storage_consul = network_obj.storage_consul
     try:
