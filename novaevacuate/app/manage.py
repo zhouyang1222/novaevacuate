@@ -28,8 +28,8 @@ def manager():
 
     NETERR_NODE = []
     for net_check in net_checks:
-        # default network check return error data ,when network check right,the return none
-        # define neterr_node save network check error return data
+        # default network check return error data ,when network check right,
+        # the return none define neterr_node save network check error return data
 
         network = item()
         network.node = net_check['name']
@@ -43,8 +43,8 @@ def manager():
                                                      network.status,network.ip))
         else:
             if network.node in FENCE_NODE:
-                logger.info("%s has been fence status,do not execute network retry check"
-                            % network.node )
+                logger.info("%s has been fence status,do not execute network"
+                            "retry check" % network.node )
             else:
                 logger.error("%s %s status is: %s (%s)" % (network.node, network.name,
                                                            network.status,network.ip))
@@ -52,24 +52,24 @@ def manager():
 
     for ser_check in ser_checks:
         service = item()
-        service.node = ser_check['node-name']
-        service.type = ser_check['datatype']
+        service.node = ser_check['node']
+        service.type = ser_check['type']
         service.status = ser_check['status']
 
         # when compute node recovery, will remove node from FENCE_NODES node name
         if service.node in FENCE_NODE:
-            if (service.node not in NETERR_NODE) and (service.status == True):
+            if (service.node not in NETERR_NODE) and (service.status == "up"):
                 FENCE_NODE.remove(service.node)
 
-        if service.status == True:
+        if service.status == "up":
             logger.info("%s %s status is: %s" %(service.node, service.type,
                                                 service.status))
-        elif service.status == False or service.status == "unknown":
+        elif service.status == "down" or service.status == "unknown":
             if service.node in FENCE_NODE:
                 logger.info("%s %s status is: %s" %(service.node, service.type,
                                                     service.status))
-                logger.info("%s has been fence status, do not execute service retry check"
-                            % service.node)
+                logger.info("%s has been fence status, do not execute service"
+                            "retry check" % service.node)
             else:
                 logger.error("%s %s status is: %s" %
                              (service.node, service.name, service.status))
