@@ -14,6 +14,7 @@ class Network(object):
         self.mgmt_consul = consul.Consul(host=self.mgmt_ip,port=8500)
         self.storage_consul = consul.Consul(host=self.storage_ip,port=8500)
         self.dict_networks = []
+        self.netmask = 22
     
     # get local ip addr
     def get_ip_address(self,ifname):
@@ -41,15 +42,22 @@ class Network(object):
             flag = flag + 1
         return False
 
+    def ip_binary(self,ip):
+        ip_nums = ip.split('.')
+        ip_bin = ''
+        for n in ip_nums:
+            ip_bin += str(bin(int(n)))
+        return ip_bin
+
     # Traversal all networks , when someone error , assignment to dict and append to list
     def server_network_status(self,network):
         dict_network = {}
         dict_network['status'] = 'true'
         members = network.agent.members()
         for member in members:
-            mgmt = self.mgmt_ip.split('.')
-            storage = self.storage_ip.split('.')
-            ip_addr = member['Addr'].split('.')
+            mgmt_ip_bin = self.ip_binary(self.mgmt_ip)
+            storage_ip_bin = self.ip_binary(self.storage_ip)
+            ip_addr_bin = self.ip_binary(member['Addr'])
             if member['Status'] != 1:
                 # when searched one network error , sleep awhile ,if it can restore auto
                 if self.network_confirm(member['Name'],network):
@@ -59,16 +67,16 @@ class Network(object):
                 dict_network['status'] = u'false'
                 dict_network['addr'] = member['Addr']
                 dict_network['role'] = member['Tags']['role']
-                if mgmt[0] == ip_addr[0] and mgmt[1] == ip_addr[1] and mgmt[2] == ip_addr[2]:
+                if mgmt_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
                     dict_network['net_role'] = 'br-mgmt'
-                elif storage[0] == ip_addr[0] and storage[1] == ip_addr[1] and storage[2] == ip_addr[2]:
+                elif storage_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
                     dict_network['net_role'] = u'br-storage'
                 # append the dict of error-network
                 self.dict_networks.append(dict_network)
             elif member['Tags']['role'] == 'node':
-                if mgmt[0] == ip_addr[0] and mgmt[1] == ip_addr[1] and mgmt[2] == ip_addr[2]:
+                if mgmt_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
                     net_role = 'br-mgmt'
-                elif storage[0] == ip_addr[0] and storage[1] == ip_addr[1] and storage[2] == ip_addr[2]:
+                elif storage_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
                     net_role = 'br-storage'
                 logger.info("%s network %s is up" % (member['Name'],net_role))
 
@@ -104,8 +112,10 @@ def get_net_status():
 
 # return current  leader
 def leader():
+    network_obj = Network()
+    storage_consul = network_obj.storage_consul
     try:
-        if storage_consul.status.leader() == (get_ip_address('br-storage') + ":8300"):
+        if storage_consul.status.leader() == (network_obj.storage_ip + ":8300"):
             return "true"
         else:
             return "false"
