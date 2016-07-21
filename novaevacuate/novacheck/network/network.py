@@ -4,6 +4,7 @@ import socket
 import fcntl
 import struct
 import time
+from netaddr import IPNetwork, IPAddress
 from novaevacuate.log import logger
 from novaevacuate.fence_agent import Fence
 from novaevacuate.send_email import Email
@@ -15,7 +16,8 @@ class Network(object):
         self.mgmt_consul = consul.Consul(host=self.mgmt_ip,port=8500)
         self.storage_consul = consul.Consul(host=self.storage_ip,port=8500)
         self.dict_networks = []
-        self.netmask = 24
+        (m, self.IPNetwork_m) = commands.getstatusoutput("LANG=C ip a show br-mgmt | awk '/inet /{ print $2 }'")
+        (s, self.IPNetwork_s) = commands.getstatusoutput("LANG=C ip a show br-storage | awk '/inet /{ print $2 }'")
     
     def get_ip_address(self,ifname):
         """ 
@@ -47,31 +49,15 @@ class Network(object):
             flag = flag + 1
         return False
 
-    def ip_binary(self,ip):
-        ip_nums = ip.split('.')
-        ip_bin = ''
-        for n in ip_nums:
-            ip_num = str(bin(int(n)))[2:]
-            length = len(ip_num)
-            while length < 8:
-                ip_num = '0'+ip_num
-                length = len(ip_num)
-            ip_bin = ip_bin + ip_num
-        return ip_bin
-
     def server_network_status(self,network):
         """
         Traversal all networks , when someone error , 
         assignment to dict and append to list
         """
-
+        
         dict_network = {}
-        dict_network['status'] = 'true'
         members = network.agent.members()
         for member in members:
-            mgmt_ip_bin = self.ip_binary(self.mgmt_ip)
-            storage_ip_bin = self.ip_binary(self.storage_ip)
-            ip_addr_bin = self.ip_binary(member['Addr'])
             if member['Status'] != 1:
                 # when searched one network error , sleep awhile ,if it can restore auto
                 if self.network_confirm(member['Name'],network):
@@ -81,16 +67,16 @@ class Network(object):
                 dict_network['status'] = u'false'
                 dict_network['addr'] = member['Addr']
                 dict_network['role'] = member['Tags']['role']
-                if mgmt_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
+                if IPAddress(member['Addr']) in IPNetwork(self.IPNetwork_m):
                     dict_network['net_role'] = 'br-mgmt'
-                elif storage_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
+                elif IPAddress(member['Addr']) in IPNetwork(self.IPNetwork_s):
                     dict_network['net_role'] = u'br-storage'
                 # append the dict of error-network
                 self.dict_networks.append(dict_network)
             elif member['Tags']['role'] == 'node':
-                if mgmt_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
+                if IPAddress(member['Addr']) in IPNetwork(self.IPNetwork_m):
                     net_role = 'br-mgmt'
-                elif storage_ip_bin[:self.netmask] == ip_addr_bin[:self.netmask]:
+                elif IPAddress(member['Addr']) in IPNetwork(self.IPNetwork_s):
                     net_role = 'br-storage'
                 logger.info("%s network %s is up" % (member['Name'],net_role))
 
@@ -120,7 +106,7 @@ def network_retry(node, name):
         message = "%s network %s had been error " % (node, name)
         email = Email()
         email.send_email(message)
-        logger.info("send email to ...")
+        logger.info("send email with %s network %s had been error" % (node, name))
 
 def get_net_status():
     """
@@ -147,4 +133,5 @@ def leader():
         else:
             return "false"
     except Exception:
+        logger.info("can't get consul leader")
         pass
