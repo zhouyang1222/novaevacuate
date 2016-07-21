@@ -12,5 +12,5 @@ setup(
 
     entry_points={
 
-    },  
+    },
 )
