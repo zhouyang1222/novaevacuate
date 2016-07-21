@@ -7,7 +7,6 @@ from novaevacuate.send_email import Email
 
 FENCE_NODES = []
 
-
 class Fence(object):
 
     def compute_fence(self, role, node):
@@ -24,35 +23,26 @@ class Fence(object):
             FENCE_NODES.append(node)
 
             if role == "network":
-                flag = 0
                 while True:
-                    service_status = nova_client.service_status()
-                    time.sleep(10)
-                    if service_status:
-                        for i in service_status:
-                            if node == i["node"]:
-                                if i["status"] == "disabled" and i["state"] == "down":
-                                    # when execut vm_evacuate , must exec nova service
-                                    # check get nova service
-                                    # status and state
-                                    logger.warn("%s has error, the instance will "
-                                                "evacuate" % node)
-                                    self.vm_evacuate(node)
-                                    message = "%s service %s had been error " % (node, role)
-                                    email = Email()
-                                    email.send_email(message)
-                                    logger.info("send email with %s had been evacuated" % node)
-                                    flag = 1
-                    if flag == 0:
-                        continue
-                    else:
+                    s = self.nova_service_status_retry(node)
+                    if s:
+                        self.vm_evacuate(node)
+                        message = "%s service %s had been error " % (node, role)
+                        email = Email()
+                        email.send_email(message)
+                        logger.info("send email with %s had been evacuated" % node)
                         break
+                    else:
+                        time.sleep(10)
+                        self.nova_service_status_retry(node)
+
             else:
                 message = "%s service %s had been error " % (node, role)
                 email = Email()
                 email.send_email(message)
-                logger.info("send email with %s service %s had been error" % (node, role))
-    
+                logger.info("send email with %s service %s had been error"
+                            % (node, role))
+
 
     def compute_fence_recovery(self, node, name):
         # when the node reboot must enable nova-compute enable
@@ -60,6 +50,28 @@ class Fence(object):
         logger.info("%s nova-compute service is enabled.")
 
     def vm_evacuate(self, node):
+        """When execute fence after, the error node will be evacuate
+
+        """
         nova_evacuate = EvacuateVmAction(node)
         nova_evacuate.run()
 
+    def nova_service_status_retry(self, node):
+        """When execute evacuate, you must get service-list status disabled
+        state down
+
+        :return: True or False
+        """
+        service_status = nova_client.service_status()
+        if service_status:
+            for i in service_status:
+                if node == i["node"]:
+                    if i["status"] == "disabled" and i["state"] == "down":
+                        # when execut vm_evacuate , must exec nova service
+                        # check get nova service
+                        # status and state
+                        logger.warn("%s has error, the instance will"
+                                    "evacuate" % node)
+                        return True
+                    else:
+                        return False

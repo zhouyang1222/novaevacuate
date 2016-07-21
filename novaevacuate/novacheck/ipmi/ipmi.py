@@ -48,7 +48,8 @@ class IpmiPower(object):
             logger.warn("IPMI get power state for node %(node)s"
                         "returns the following details: %(detail)s"),\
             {'node':self.ip, 'detail': ret}
-            return state
+            status.append({"node":self.ip, "status":state})
+            return status
 
     def _power_off(self):
         """Trun the power off for this node.
@@ -67,13 +68,13 @@ class IpmiPower(object):
             logger.error(error)
             raise exception.IPMIFailure(error)
 
-        state = ret.get('powerstate')
-        if state == 'off':
-            return state
-        else:
-            error = ("bad response: %s") % ret
-            logger.error(msg, {'node':self.ip, 'error':error})
-            raise exception.PowerStateFailure(pstate=state)
+        # state = ret.get('powerstate')
+        # if state == 'off':
+        #    return state
+        # else:
+        #    error = ("bad response: %s") % ret
+        #    logger.error(msg, {'node':self.ip, 'error':error})
+        #    raise exception.PowerStateFailure(pstate=state)
 
     def _reboot(self):
         """Reboot this node.
@@ -92,15 +93,15 @@ class IpmiPower(object):
             logger.error(error)
             raise exception.IPMIFailure(error)
 
-        state = ret.get('powerstate')
-        if 'error' in ret:
-            error = ("bad response: %s") % ret
-            logger.error(msg, {'node':self.ip, 'error': error})
-            raise exception.PowerStateFailure(pstate=state)
+        # state = ret.get('powerstate')
+        # if 'error' in ret:
+        #    error = ("bad response: %s") % ret
+        #    logger.error(msg, {'node':self.ip, 'error': error})
+        #    raise exception.PowerStateFailure(pstate=state)
 
-        state = ret.get('powerstate')
+        # state = ret.get('powerstate')
 
-        return state
+        # return state
 
     def _power_on(self):
         """Trun the power on for this node.
@@ -117,10 +118,14 @@ class IpmiPower(object):
             logger.error(error)
             raise exception.IPMIFailure(error)
 
-        state = ret.get('powerstate')
-        if state == 'on':
-            return state
-        else:
-            error = ("bad response: %s") % ret
-            logger.error(msg, {'node':self.ip, 'error': error})
-            raise exception.PowerStateFailure(pstate=state)
+        # state = ret.get('powerstate')
+        # if state == 'on':
+        #    return state
+        # else:
+        #    error = ("bad response: %s") % ret
+        #    logger.error(msg, {'node':self.ip, 'error': error})
+        #    raise exception.PowerStateFailure(pstate=state)
+
+def get_ipmi_status():
+    s = IpmiPower()
+    s._power_status()

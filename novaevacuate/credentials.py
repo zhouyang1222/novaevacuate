@@ -19,10 +19,13 @@ if s == 0:
 
 
 def get_nova_credentials_v2():
+    """Config nova client auth, auth use /root/openrc file
+    """
     d = {}
     d['version'] = '2'
     d['username'] = var['OS_USERNAME']
     d['api_key'] = var['OS_PASSWORD']
     d['auth_url'] = var['OS_AUTH_URL']
     d['project_id'] = var['OS_TENANT_NAME']
+
     return d
