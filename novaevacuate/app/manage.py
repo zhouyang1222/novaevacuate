@@ -4,6 +4,7 @@ from novaevacuate.novacheck.service.service import get_service_status as service
 from novaevacuate.novacheck.network.network import leader
 from novaevacuate.novacheck.network.network import network_retry
 from novaevacuate.novacheck.service.service import novaservice_retry
+from novaevacuate.novacheck.ipmi.ipmi import get_ipmi_status as ipmi_check
 from novaevacuate.log import logger
 from novaevacuate.fence_agent import FENCE_NODES
 
@@ -20,6 +21,7 @@ class item:
 def manager():
     if leader() == "true":
         logger.info("Openstack nova evacuate start check")
+        # ipmi_checks = ipmi_check()
         net_checks = network_check()
         ser_checks = service_check()
     else:
